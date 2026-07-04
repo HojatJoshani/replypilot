@@ -1,0 +1,197 @@
+// ReplyPilot — Instagram automation SaaS
+// Multi-tenant schema (SQLite-adapted: lists stored as comma/pipe-separated strings or JSON)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  plan      String   @default("free") // free | pro | business
+  status    String   @default("active") // active | suspended | canceled
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users             User[]
+  instagramAccounts InstagramAccount[]
+  automationRules   AutomationRule[]
+  conversations     ConversationLog[]
+  leads             Lead[]
+  aiConfigs         AiConfig[]
+  subscription      Subscription?
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String
+  email        String   @unique
+  passwordHash String?
+  name         String?
+  image        String?
+  role         String   @default("admin") // admin | member
+  provider     String   @default("credentials") // credentials | google
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model InstagramAccount {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  igUserId             String
+  igUsername           String
+  igProfilePic         String?
+  accessTokenEncrypted String
+  tokenExpiresAt       DateTime?
+  status               String   @default("active") // active | disconnected | expired
+  followerCount        Int      @default(0)
+  connectedAt          DateTime @default(now())
+  lastEventAt          DateTime?
+
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  automationRules   AutomationRule[]
+  conversations     ConversationLog[]
+  aiConfig          AiConfig?
+  leads             Lead[]
+
+  @@unique([tenantId, igUserId])
+  @@index([tenantId])
+}
+
+model AiConfig {
+  id                String   @id @default(cuid())
+  igAccountId       String   @unique
+  tenantId          String
+  businessName      String?
+  tone              String   @default("friendly") // friendly | professional | casual | playful
+  description       String?
+  products          String? // newline-separated list
+  services          String?
+  faqs              String? // JSON: [{q, a}]
+  pricingVisible    Boolean  @default(false)
+  pricingNote       String?
+  purchaseLink      String?
+  workingHours      String?
+  specialRules      String?
+  aiFallbackEnabled Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+
+  instagramAccount InstagramAccount @relation(fields: [igAccountId], references: [id], onDelete: Cascade)
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model AutomationRule {
+  id               String   @id @default(cuid())
+  tenantId         String
+  igAccountId      String
+  name             String
+  triggerType      String // keyword | any_dm | any_comment | story_reply
+  triggerKeywords  String // comma-separated (lowercased)
+  triggerMatchMode String   @default("any") // any | all
+  responseType     String // static_text | static_media | ai_generated
+  staticResponse   String?
+  mediaUrl         String?
+  aiPromptOverride String?
+  isActive         Boolean  @default(true)
+  priority         Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  instagramAccount InstagramAccount @relation(fields: [igAccountId], references: [id], onDelete: Cascade)
+  conversations    ConversationLog[]
+
+  @@index([tenantId, igAccountId])
+  @@index([priority])
+}
+
+model ConversationLog {
+  id              String   @id @default(cuid())
+  tenantId        String
+  igAccountId     String
+  contactIgId     String
+  contactUsername String?
+  channel         String // dm | comment | story
+  inboundMessage  String
+  outboundMessage String?
+  matchedRuleId   String?
+  wasAiGenerated  Boolean  @default(false)
+  escalated       Boolean  @default(false)
+  intent          String?
+  suggestedAction String?
+  status          String   @default("auto") // auto | manual | escalated | resolved | failed
+  postPermalink   String?
+  aiModel         String?
+  createdAt       DateTime @default(now())
+
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  instagramAccount InstagramAccount @relation(fields: [igAccountId], references: [id], onDelete: Cascade)
+  matchedRule      AutomationRule?  @relation(fields: [matchedRuleId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, igAccountId])
+  @@index([contactIgId])
+  @@index([createdAt])
+}
+
+model Lead {
+  id              String   @id @default(cuid())
+  tenantId        String
+  igAccountId     String?
+  contactIgId     String
+  contactUsername String?
+  tags            String   @default("") // comma-separated
+  notes           String?
+  status          String   @default("new") // new | contacted | qualified | won | lost
+  source          String   @default("dm") // dm | comment | story
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  instagramAccount InstagramAccount? @relation(fields: [igAccountId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([status])
+}
+
+model Subscription {
+  id               String    @id @default(cuid())
+  tenantId         String    @unique
+  plan             String    @default("free") // free | pro | business
+  status           String    @default("active") // active | trialing | canceled | past_due
+  seats            Int       @default(1)
+  currentPeriodEnd DateTime?
+  cancelAtPeriodEnd Boolean  @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// Tracks webhook events queued for background processing (in-memory queue reads these).
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  igAccountId String?
+  eventType   String // messages | comments | mentions
+  payload     String // raw JSON
+  signature   String?
+  status      String   @default("queued") // queued | processing | done | failed
+  error       String?
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now())
+  processedAt DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+}
