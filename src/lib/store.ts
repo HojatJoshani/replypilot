@@ -10,7 +10,8 @@ export type ViewId =
   | "leads"
   | "analytics"
   | "billing"
-  | "settings";
+  | "settings"
+  | "tutorial";
 
 interface AppState {
   view: ViewId;

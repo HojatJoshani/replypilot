@@ -11,6 +11,7 @@ import {
   Settings,
   Sparkles,
   X,
+  GraduationCap,
 } from "lucide-react";
 import { useAppStore, type ViewId } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ const NAV: { id: ViewId; label: string; icon: typeof Inbox }[] = [
   { id: "leads", label: t.nav.leads, icon: Users },
   { id: "analytics", label: t.nav.analytics, icon: BarChart3 },
   { id: "billing", label: t.nav.billing, icon: CreditCard },
+  { id: "tutorial", label: t.nav.tutorial, icon: GraduationCap },
   { id: "settings", label: t.nav.settings, icon: Settings },
 ];
 
@@ -72,13 +74,13 @@ export function AppSidebar() {
           <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             {t.nav.workspace}
           </div>
-          {NAV.slice(0, 6).map((item) => (
+          {NAV.slice(0, 7).map((item) => (
             <NavButton key={item.id} item={item} active={view === item.id} onClick={() => { setView(item.id); setSidebarOpen(false); }} />
           ))}
           <div className="px-2 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             {t.nav.account}
           </div>
-          {NAV.slice(6).map((item) => (
+          {NAV.slice(7).map((item) => (
             <NavButton key={item.id} item={item} active={view === item.id} onClick={() => { setView(item.id); setSidebarOpen(false); }} />
           ))}
         </nav>

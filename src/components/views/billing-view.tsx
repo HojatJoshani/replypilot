@@ -57,7 +57,7 @@ function ConnectAccountCta() {
       <div className="space-y-1">
         <h3 className="text-lg font-semibold">یک حساب اینستاگرام متصل کنید</h3>
         <p className="text-sm text-muted-foreground max-w-sm">
-          برای استفاده از ریپلای‌پایلوت و مدیریت اشتراک، یک حساب متصل کنید.
+          برای استفاده از آریا و مدیریت اشتراک، یک حساب متصل کنید.
         </p>
       </div>
       <Button onClick={connect} className="ig-gradient text-white">{t.settings.connectInstagram}</Button>

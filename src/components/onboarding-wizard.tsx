@@ -536,7 +536,7 @@ function Step3Body({
               <Sparkles className="h-5 w-5 text-primary" />
             </div>
             <p className="text-sm text-muted-foreground">
-              یک پیام شبیه‌سازی‌شده بفرستید تا ببینید ریپلای‌پایلوت چطور پاسخ می‌دهد.
+              یک پیام شبیه‌سازی‌شده بفرستید تا ببینید آریا چطور پاسخ می‌دهد.
             </p>
           </div>
         )}

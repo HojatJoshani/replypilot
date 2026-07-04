@@ -15,6 +15,7 @@ import { LeadsView } from "@/components/views/leads-view";
 import { AnalyticsView } from "@/components/views/analytics-view";
 import { BillingView } from "@/components/views/billing-view";
 import { SettingsView } from "@/components/views/settings-view";
+import { TutorialView } from "@/components/views/tutorial-view";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import type { InstagramAccountDto, AutomationRuleDto } from "@/types";
@@ -92,6 +93,7 @@ export function AppShell() {
             {view === "analytics" && <AnalyticsView />}
             {view === "billing" && <BillingView />}
             {view === "settings" && <SettingsView />}
+            {view === "tutorial" && <TutorialView />}
           </main>
           <footer className="mt-auto border-t bg-background/80 px-4 py-3 text-center text-xs text-muted-foreground backdrop-blur">
             {t.demo.footer}

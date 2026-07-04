@@ -425,7 +425,7 @@ function DangerZoneCard() {
     <Card className="border-destructive/30">
       <CardHeader>
         <CardTitle className="text-base text-destructive">{t.settings.dangerZone}</CardTitle>
-        <CardDescription>از حساب ریپلای‌پایلوت روی این دستگاه خارج شوید.</CardDescription>
+        <CardDescription>از حساب آریا روی این دستگاه خارج شوید.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
