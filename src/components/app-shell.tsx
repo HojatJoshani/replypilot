@@ -24,7 +24,7 @@ export function AppShell() {
   const { view, selectedAccountId, setSelectedAccountId } = useAppStore();
 
   // Load accounts once authenticated; default the selected account.
-  const { data: accountsData } = useQuery<{ accounts: InstagramAccountDto[] }>({
+  const { data: accountsData, isLoading: accountsLoading } = useQuery<{ accounts: InstagramAccountDto[] }>({
     queryKey: ["ig-accounts"],
     queryFn: () => api.get("/api/instagram/accounts"),
     enabled: status === "authenticated",
@@ -45,6 +45,19 @@ export function AppShell() {
 
   if (status !== "authenticated" || !session) {
     return <LoginScreen />;
+  }
+
+  // Wait for accounts to load before rendering the dashboard so views don't
+  // briefly flash the "no account" empty state (race condition fix).
+  if (accountsLoading && !selectedAccountId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">در حال بارگذاری داشبورد…</p>
+        </div>
+      </div>
+    );
   }
 
   return (
