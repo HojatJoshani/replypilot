@@ -47,6 +47,22 @@ export const authOptions: NextAuthOptions = {
         token.tenantId = u.tenantId;
         token.role = u.role;
       }
+      // Re-validate the user still exists in the DB on each request.
+      // This handles re-seed scenarios where the user/tenant ID changed.
+      if (token.id) {
+        const fresh = await db.user.findUnique({
+          where: { id: token.id },
+          select: { tenantId: true, role: true },
+        });
+        if (!fresh) {
+          // User was deleted (e.g. re-seed) — invalidate the token.
+          token.tenantId = "";
+          token.id = "";
+        } else {
+          token.tenantId = fresh.tenantId;
+          token.role = fresh.role;
+        }
+      }
       return token;
     },
     async session({ session, token }) {

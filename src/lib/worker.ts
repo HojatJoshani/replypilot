@@ -43,13 +43,14 @@ export function parseWebhookPayload(payload: unknown): ParsedEvent[] {
     // DMs (messaging)
     if (Array.isArray(e.messaging)) {
       for (const m of e.messaging as Record<string, unknown>[]) {
-        const sender = (m.sender as { id?: string })?.id;
+        const sender = m.sender as { id?: string; username?: string } | undefined;
         const recipient = (m.recipient as { id?: string })?.id;
         const msg = (m.message as { text?: string })?.text;
-        if (!sender || !msg) continue;
+        if (!sender?.id || !msg) continue;
         events.push({
           igAccountId: recipient,
-          contactIgId: sender,
+          contactIgId: sender.id,
+          contactUsername: sender.username,
           channel: "dm",
           message: msg,
         });
@@ -281,13 +282,15 @@ async function upsertLead(
 
 /** In demo mode, inject a simulated inbound event for a given account. */
 export async function simulateInbound(accountId: string, channel: "dm" | "comment" | "story", message: string, from?: { id: string; username?: string }) {
+  const username = from?.username || "مشتری_دمو";
+  const senderId = from?.id || "sim_user_" + Math.random().toString(36).slice(2, 8);
   const payload = {
     object: "instagram",
     entry: channel === "dm"
       ? [{
           id: accountId,
           messaging: [{
-            sender: { id: from?.id || "sim_user_" + Math.random().toString(36).slice(2, 8) },
+            sender: { id: senderId, username },
             recipient: { id: accountId },
             message: { text: message },
           }],
@@ -299,7 +302,7 @@ export async function simulateInbound(accountId: string, channel: "dm" | "commen
             value: {
               id: channel === "comment" ? "sim_c_" + Date.now() : undefined,
               text: message,
-              from: { id: from?.id || "sim_user", username: from?.username || "sim_customer" },
+              from: { id: senderId, username },
               media: { permalink: "https://instagram.com/p/sim" },
               permalink: "https://instagram.com/p/sim",
             },

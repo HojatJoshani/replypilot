@@ -1,197 +1,199 @@
-# ReplyPilot — Instagram Automation SaaS
+# ریپلای‌پایلوت — پلتفرم خودکارسازی اینستاگرام (SaaS چندمستاجری)
 
-ReplyPilot is a full-stack, **multi-tenant SaaS platform for Instagram automation**. Each customer ("tenant") connects their own Instagram Business/Creator account, then configures automation rules through a dashboard. The backend receives Instagram webhooks (DMs, comments, story replies) and responds via keyword-matching rules **or** an optional AI-powered response layer trained on the tenant's business context.
+ریپلای‌پایلوت یک پلتفرم **چدمستاجری SaaS برای خودکارسازی اینستاگرام** است. هر مشتری («مستاجر») حساب اینستاگرام بیزینس یا کریتور خود را متصل می‌کند، سپس قوانین خودکارسازی را از طریق داشبورد پیکربندی می‌کند. بک‌اند وب‌هوک‌های اینستاگرام (دایرکت، کامنت، ریپلای استوری) را دریافت کرده و از طریق قوانین تطبیق کلمه کلیدی **یا** یک لایه پاسخگویی هوش مصنوعی اختیاری که روی زمینه کسب‌وکار آموزش دیده، پاسخ می‌دهد.
 
-Built for small-to-medium businesses — online shops, service providers, educators, and influencers — who want to automate replies to Instagram DMs, comments, and story replies.
+این پلتفرم برای کسب‌وکارهای کوچک‌تامتوسط — فروشگاه‌های آنلاین، ارائه‌دهندگان خدمات، آموزش‌دهندگان و اینفلوئنسرها — ساخته شده که می‌خواهند پاسخ به دایرکت، کامنت و ریپلای استوری اینستاگرام را خودکار کنند.
 
----
-
-## ✨ Features
-
-- **Multi-tenant** — every query is scoped by `tenantId`; full data isolation.
-- **Instagram OAuth** — connect a Business/Creator account via official Meta OAuth (simulated in demo mode; real code path ready for production).
-- **Webhook ingestion** — `GET` verification (hub.challenge) + `POST` events with `X-Hub-Signature-256` verification, acked within seconds, processed asynchronously.
-- **Background worker** — in-memory queue (BullMQ/Redis replaced for this environment) drains webhook events with bounded concurrency and crash recovery.
-- **Automation Rule Builder** — trigger types (`keyword`, `any_dm`, `any_comment`, `story_reply`), response types (`static_text`, `static_media`, `ai_generated`), **drag-to-reorder priority**, and a live rule tester.
-- **AI Assistant** — a structured "Business Context" form (name, tone, products, services, FAQs, pricing, working hours, special rules) that is injected into a fixed Core system prompt. **Tenants never edit the raw prompt** — by design, for safety and consistency. The AI returns structured JSON `{ reply, intent, escalate, suggestedAction }`; malformed JSON falls back gracefully and never fails silently.
-- **Conversation Inbox** — live view of recent DMs/comments/story replies with thread history, AI/rule badges, escalation flags, suggested actions, manual reply, and resolve/follow-up controls.
-- **Leads CRM** — captured leads (from escalations + pricing/order intents) with tags, statuses, notes, CSV export.
-- **Analytics** — response volume over time, AI-vs-rule split, channel breakdown, top intents, top trigger rules, escalation rate.
-- **Billing** — plan management (Starter/Growth/Scale) stubbed for MVP; swap in Stripe or a local gateway.
-- **Encrypted tokens** — Instagram access tokens are AES-256-GCM encrypted at rest; never stored in plaintext.
-- **Token refresh** — a scheduled job refreshes long-lived tokens (~60-day lifetime) before expiry.
-- **Dark mode** + fully responsive design.
+> 🌐 **کاملاً فارسی و راست‌چین (RTL)** — با فونت وزیرمتن، اعداد فارسی و تاریخ شمسی.
 
 ---
 
-## 🧱 Tech Stack
+## ✨ امکانات
 
-| Layer | Choice | Notes |
+- **چدمستاجری** — هر کوئری بر اساس `tenantId` محدوده می‌شود؛ ایزوله‌سازی کامل داده‌ها.
+- **اوآث اینستاگرام** — اتصال حساب بیزینس/کریتور از طریق اوآث رسمی متا (در حالت دمو شبیه‌سازی می‌شود؛ مسیر کد واقعی آماده تولید است).
+- **دریافت وب‌هوک** — تأیید `GET` (hub.challenge) + رویدادهای `POST` با تأیید هدر `X-Hub-Signature-256`، تأیید در چند ثانیه، پردازش ناهمگام.
+- **ورکر پس‌زمینه** — صف درون‌حافظه‌ای (جایگزین BullMQ/Redis) با همزمانی محدود و بازیابی پس از کرش.
+- **سازنده قوانین خودکارسازی** — انواع راه‌انداز (`keyword`، `any_dm`، `any_comment`، `story_reply`)، انواع پاسخ (`static_text`، `static_media`، `ai_generated`)، **تغییر اولویت با کشیدن و رها کردن**، و تستر زنده قوانین.
+- **دستیار هوش مصنوعی** — یک فرم ساختاریافته «زمینه کسب‌وکار» (نام، لحن، محصولات، خدمات، سؤالات متداول، قیمت‌گذاری، ساعات کاری، قوانین خاص) که در یک پرامپت سیستم اصلی ثابت تزریق می‌شود. **مستاجران هرگز پرامپت خام را ویرایش نمی‌کنند** — این‌گونه طراحی شده تا رفتار یکپارچه و امن باشد. هوش مصنوعی JSON ساختاریافته `{ reply, intent, escalate, suggestedAction }` برمی‌گرداند؛ JSON malformed به‌خوبی fallback می‌شود و هرگز بی‌صدا شکست نمی‌خورد.
+- **صندوق گفتگوها** — نمای زنده/نزدیک‌به‌زنده دایرکت‌ها/کامنت‌ها/ریپلای استوری‌های اخیر با تاریخچه رشته، نشان‌های هوش مصنوعی/قانون، پرچم‌های ارجاع، اقدامات پیشنهادی، پاسخ دستی و کنترل حل/پیگیری.
+- **CRM سرنخ‌ها** — سرنخ‌های ثبت‌شده (از ارجاعات + نیت‌های قیمت/سفارش) با برچسب، وضعیت، یادداشت، خروجی CSV.
+- **تحلیل‌ها** — حجم پاسخ در طول زمان، تفکیک هوش مصنوعی در برابر قانون، تفکیک کانال، نیت‌های برتر، قوانین راه‌انداز برتر، نرخ ارجاع.
+- **اشتراک/مدیریت طرح** (برای MVP stub شده) — استرایپ یا یک درگاه ایرانی را بعداً جایگزین کنید.
+- **توکن‌های رمزنگاری‌شده** — توکن‌های دسترسی اینستاگرام با AES-256-GCM در حالت سکون رمزنگاری می‌شوند؛ هرگز به‌صورت plaintext ذخیره نمی‌شوند.
+- **بازخوانی توکن** — یک کار زمان‌بندی‌شده توکن‌های long-lived (~۶۰ روز) را قبل از انقضا بازخوانی می‌کند.
+- **حالت تاریک** + طراحی کاملاً واکنش‌گرا.
+
+---
+
+## 🧱 پشته فنی
+
+| لایه | انتخاب | یادداشت |
 |---|---|---|
-| Framework | **Next.js 16** (App Router) + TypeScript | Single deployable |
-| Styling | Tailwind CSS 4 + shadcn/ui (New York) | Instagram-inspired rose/fuchsia theme |
-| Database | Prisma ORM + **SQLite** | PostgreSQL in production (schema is portable — change the `datasource` provider + `DATABASE_URL`) |
-| Queue | **In-memory job queue** | Replaces BullMQ+Redis for this environment; crash-recovery via `WebhookEvent` rows. Swap in BullMQ+Redis for horizontal scale. |
-| Auth | NextAuth.js v4 (credentials + JWT) | Email/password + one-click demo. Add Google via NextAuth's GoogleProvider. |
-| AI | `z-ai-web-dev-sdk` (GLM, OpenAI-compatible) | Backend-only; configurable via env to point to other providers |
-| Charts | Recharts | |
-| Drag-reorder | @dnd-kit | For rule priority |
+| فریمورک | **Next.js 16** (App Router) + TypeScript | یک پروژه قابل‌استقرار |
+| استایل | Tailwind CSS 4 + shadcn/ui (New York) | پالت الهام‌گرفته از اینستاگرام (رز/فوشیا) |
+| پایگاه‌داده | Prisma ORM + **SQLite** | PostgreSQL در تولید (اسکما قابل‌انتقال است — فقط `datasource` و `DATABASE_URL` را عوض کنید) |
+| صف | **صف درون‌حافظه‌ای** | جایگزین BullMQ+Redis برای این محیط؛ بازیابی پس از کرش از طریق ردیف‌های `WebhookEvent`. برای مقیاس افقی، BullMQ+Redis را جایگزین کنید. |
+| احراز هویت | NextAuth.js v4 (credentials + JWT) | ایمیل/رمز عبور + دمو یک‌کلیکی. Google را با GoogleProvider اضافه کنید. |
+| هوش مصنوعی | `z-ai-web-dev-sdk` (GLM، سازگار با OpenAI) | فقط بک‌اند؛ با env قابل پیکربندی برای اتصال به ارائه‌دهندگان دیگر |
+| نمودارها | Recharts | |
+| کشیدن و رها کردن | @dnd-kit | برای اولویت قوانین |
 
-### Adaptations from the original spec
-- **PostgreSQL → SQLite**: the Prisma schema uses no PG-specific features (lists are comma/JSON strings), so switching to Postgres is a one-line `provider` change + `DATABASE_URL`.
-- **BullMQ+Redis → in-memory queue**: same semantics (enqueue, bounded concurrency, ack-then-process, crash recovery). The `WebhookEvent` table persists unprocessed events so nothing is lost on restart.
-- **Single route**: the dashboard is a single-page app with client-side view switching (zustand), per the environment constraint. All API routes live under `/api/*`.
+### تطبیق‌ها از مشخصات اصلی
+- **PostgreSQL → SQLite**: اسکما Prisma از هیچ ویژگی اختصاصی PG استفاده نمی‌کند (لیست‌ها به‌صورت رشته‌های comma/JSON هستند)، بنابراین تغییر به Postgres یک خط `provider` است.
+- **BullMQ+Redis → صف درون‌حافظه‌ای**: همان semantics (enqueue، همزمانی محدود، ack-then-process، بازیابی پس از کرش). جدول `WebhookEvent` رویدادهای پردازش‌نشده را persist می‌کند تا چیزی هنگام restart از دست نرود.
+- **مسیر تک**: داشبورد یک اپ تک‌صفحه‌ای با تغییر view سمت کلاینت (zustand) است. همه مسیرهای API زیر `/api/*` هستند.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 شروع کار
 
-### Prerequisites
+### پیش‌نیازها
 - Node.js 20+ / Bun
-- A Meta Developer account (for real Instagram integration — optional; the app runs in **demo mode** without one)
+- یک اکانت Meta Developer (برای ادغام واقعی اینستاگرام — اختیاری؛ اپ در **حالت دمو** بدون آن اجرا می‌شود)
 
-### Install & run
+### نصب و اجرا
 ```bash
 bun install
-cp .env.example .env   # then fill in secrets (see below)
-bun run db:push        # create SQLite schema
+cp .env.example .env   # سپس مقادیر را پر کنید (پایین را ببینید)
+bun run db:push        # ایجاد اسکما SQLite
 bun run db:generate
-bun scripts/seed.ts    # seed demo tenant + data
+bun scripts/seed.ts    # seed مستاجر دمو + داده‌ها
 bun run dev            # http://localhost:3000
 ```
 
-### Demo login
-- **Email:** `demo@replypilot.app`
-- **Password:** `demo1234`
-- Or click **"Explore the live demo"** on the login screen.
+### ورود دمو
+- **ایمیل:** `demo@replypilot.app`
+- **رمز عبور:** `demo1234`
+- یا روی **«مشاهده دمو به‌صورت زنده»** در صفحه ورود کلیک کنید.
 
-The seed creates a demo tenant ("Glow Skin Studio", a skincare business) with 1 Instagram account, a full AI business-context config, 6 automation rules, 22 conversations across 30 days, and 10 leads.
+seed یک مستاجر دمو می‌سازد («استودیو پوست گلو»، یک کسب‌وکار مراقبت پوست) با ۱ حساب اینستاگرام، یک کانفیگ کامل زمینه کسب‌وکار هوش مصنوعی، ۶ قانون خودکارسازی، ۲۲ گفتگو در ۳۰ روز اخیر و ۱۰ سرنخ.
 
 ---
 
-## 🔑 Environment Variables
+## 🔑 متغیرهای محیطی
 
-| Variable | Required | Description |
+| متغیر | ضروری | توضیح |
 |---|---|---|
-| `DATABASE_URL` | yes | Prisma datasource URL (SQLite: `file:./db/custom.db`) |
-| `NEXTAUTH_SECRET` | yes | NextAuth JWT secret (`openssl rand -hex 32`) |
-| `NEXTAUTH_URL` | yes | App base URL (`http://localhost:3000`) |
-| `ENCRYPTION_KEY` | yes | 32-byte hex key for AES-256 token encryption (`openssl rand -hex 32`) |
-| `INSTAGRAM_APP_ID` | demo optional | Meta App ID. **When empty, the app runs in demo mode.** |
-| `INSTAGRAM_APP_SECRET` | demo optional | Meta App secret (for webhook signature verification) |
-| `INSTAGRAM_VERIFY_TOKEN` | demo optional | Arbitrary string you set in the Meta webhook config |
-| `INSTAGRAM_GRAPH_API_VERSION` | optional | Defaults to `v21.0` |
-| `AI_ENABLED` | optional | `true`/`false`. Defaults to `true`. |
-| `DEMO_MODE` | optional | Force demo mode. Auto-enabled when `INSTAGRAM_APP_ID` is empty. |
+| `DATABASE_URL` | بله | URL datasource پرنیسما (SQLite: `file:./db/custom.db`) |
+| `NEXTAUTH_SECRET` | بله | راز JWT نکست‌اؤث (`openssl rand -hex 32`) |
+| `NEXTAUTH_URL` | بله | URL پایه اپ (`http://localhost:3000`) |
+| `ENCRYPTION_KEY` | بله | کلید ۳۲ بایتی هگز برای رمزنگاری AES-256 توکن (`openssl rand -hex 32`) |
+| `INSTAGRAM_APP_ID` | در دمو اختیاری | ID اپ متا. **وقتی خالی باشد، اپ در حالت دمو اجرا می‌شود.** |
+| `INSTAGRAM_APP_SECRET` | در دمو اختیاری | راز اپ متا (برای تأیید امضای وب‌هوک) |
+| `INSTAGRAM_VERIFY_TOKEN` | در دمو اختیاری | رشته دلخواه که در کانفیگ وب‌هوک متا تنظیم می‌کنید |
+| `INSTAGRAM_GRAPH_API_VERSION` | اختیاری | پیش‌فرض `v21.0` |
+| `AI_ENABLED` | اختیاری | `true`/`false`. پیش‌فرض `true`. |
+| `DEMO_MODE` | اختیاری | اجبار به حالت دمو. وقتی `INSTAGRAM_APP_ID` خالی باشد خودکار فعال می‌شود. |
 
 ---
 
-## 📸 Meta App Setup (going live with real Instagram)
+## 📸 راه‌اندازی اپ متا (فعال‌سازی با اینستاگرام واقعی)
 
-> The app works end-to-end in **demo mode** without any of this. Follow these steps to connect real Instagram accounts.
+> اپ در **حالت دمو** بدون هیچ‌کدام از این‌ها کار می‌کند. برای اتصال حساب‌های واقعی اینستاگرام این مراحل را دنبال کنید.
 
-### 1. Create a Meta App
-1. Go to <https://developers.facebook.com/apps> → **Create App**.
-2. Choose **Business** as the app type.
-3. Give it a name (e.g. "ReplyPilot") and contact email.
+### ۱. ایجاد اپ متا
+1. به <https://developers.facebook.com/apps> بروید → **Create App**.
+2. نوع اپ را **Business** انتخاب کنید.
+3. نام (مثلاً «ReplyPilot») و ایمیل تماس را وارد کنید.
 
-### 2. Add the Instagram product
-1. In your App Dashboard → **Add Product** → find **Instagram** → **Set Up**.
-2. This enables the Instagram Graph API for your app.
+### ۲. افزودن محصول اینستاگرام
+1. در داشبورد اپ → **Add Product** → **Instagram** را پیدا کنید → **Set Up**.
+2. این کار Instagram Graph API را برای اپ شما فعال می‌کند.
 
-### 3. Configure Instagram Business Login (OAuth)
-1. **App Dashboard → Instagram → Basic Display** (or **Instagram Login with Facebook Login** for Business).
-2. Add the **Instagram Business Login** product/permission set.
-3. Required permissions (these must be requested and may require App Review for public use):
+### ۳. پیکربندی Instagram Business Login (OAuth)
+1. **App Dashboard → Instagram → Basic Display** (یا **Instagram Login with Facebook Login** برای بیزینس).
+2. محصول/مجموعه دسترسی **Instagram Business Login** را اضافه کنید.
+3. دسترسی‌های موردنیاز (این‌ها باید درخواست شوند و برای استفاده عمومی ممکن است به App Review نیاز داشته باشند):
    - `instagram_business_basic`
    - `instagram_business_manage_messages`
    - `instagram_business_manage_comments`
-   - `instagram_business_content_publish` *(only if you later publish story/post replies)*
-4. Set the **Valid OAuth Redirect URIs** to:
+   - `instagram_business_content_publish` *(فقط اگر بعداً قابلیت استوری/پست را اضافه می‌کنید)*
+4. **Valid OAuth Redirect URIs** را روی این تنظیم کنید:
    ```
    https://YOUR_DOMAIN/api/instagram/oauth/callback
    ```
-   (In dev: `http://localhost:3000/api/instagram/oauth/callback`.)
+   (در توسعه: `http://localhost:3000/api/instagram/oauth/callback`.)
 
-### 4. Configure the webhook
+### ۴. پیکربندی وب‌هوک
 1. **App Dashboard → Instagram → Webhooks**.
-2. **Subscribe to objects**: `messages`, `comments`, `mentions` (and `story_insights` if you handle story replies).
+2. **اشتراک در آبجکت‌ها**: `messages`، `comments`، `mentions` (و `story_insights` اگر ریپلای استوری را مدیریت می‌کنید).
 3. **Callback URL**: `https://YOUR_DOMAIN/api/instagram/webhook`
-4. **Verify Token**: the exact value of your `INSTAGRAM_VERIFY_TOKEN` env var.
-5. Click **Verify and Save** — Meta sends a `GET` with `hub.challenge`; ReplyPilot verifies the token and echoes it back.
-6. Subscribe the connected Instagram account to the webhook fields.
+4. **Verify Token**: دقیقاً مقدار متغیر محیطی `INSTAGRAM_VERIFY_TOKEN` شما.
+5. روی **Verify and Save** کلیک کنید — متا یک `GET` با `hub.challenge` می‌فرستد؛ ریپلای‌پایلوت توکن را تأیید کرده و آن را برمی‌گرداند.
+6. حساب اینستاگرام متصل را به فیلدهای وب‌هوک subscribe کنید.
 
-### 5. Get your App credentials
+### ۵. دریافت credentials اپ
 - **App ID** → `INSTAGRAM_APP_ID`
 - **App Secret** → `INSTAGRAM_APP_SECRET`
-- Put both in `.env` and restart. The app now runs in **production mode** (signature verification enforced, real OAuth, real DM/comment sends).
+- هر دو را در `.env` بگذارید و restart کنید. اپ حالا در **حالت تولید** اجرا می‌شود (تأیید امضا فعال، اوآث واقعی، ارسال واقعی دایرکت/کامنت).
 
-### 6. App Review (for public/production use)
-- While your app is in **Development mode**, only accounts listed as App Roles (testers/admins) can be connected and receive webhooks.
-- To let **any** Instagram Business/Creator account connect, submit the app for **App Review** with the permissions above. Provide:
-  - A screencast showing the OAuth flow and how each permission is used.
-  - A privacy policy URL.
-  - Data deletion callback (for compliance).
-- Review typically takes a few business days. See <https://developers.facebook.com/docs/app-review>.
+### ۶. App Review (برای استفاده عمومی/تولید)
+- وقتی اپ در **حالت Development** است، فقط اکانت‌هایی که به‌عنوان App Role (tester/admin) اضافه شده‌اند می‌توانند متصل شوند و وب‌هوک دریافت کنند.
+- برای اینکه **هر** حساب اینستاگرام بیزینس/کریتور بتواند متصل شود، اپ را برای **App Review** با دسترسی‌های بالا ارسال کنید. ارائه دهید:
+  - یک screencast که flow اوآث و نحوه استفاده از هر دسترسی را نشان می‌دهد.
+  - URL سیاست حریم خصوصی.
+  - callback حذف داده (برای انطباق).
+- Review معمولاً چند روز کاری طول می‌کشد. <https://developers.facebook.com/docs/app-review> را ببینید.
 
-### 7. Messaging windows & policies
-- **DMs**: Instagram enforces a **24-hour standard messaging window**. ReplyPilot replies immediately on receipt, which is within the window. For exceptions (e.g. `HUMAN_AGENT` tag, up to 7 days), consult the [current Meta docs](https://developers.facebook.com/docs/messenger-platform/instagram/features/send-message) before enabling — policies change.
-- **Comments**: replies use the Comments API; no messaging window applies.
+### ۷. پنجره‌های پیام‌رسانی و سیاست‌ها
+- **دایرکت**: اینستاگرام یک **پنجره پیام‌رسانی استاندارد ۲۴ ساعته** اعمال می‌کند. ریپلای‌پایلوت بلافاصله پس از دریافت پاسخ می‌دهد که درون پنجره است. برای استثناها (مثلاً تگ `HUMAN_AGENT`، تا ۷ روز)، [مستندات فعلی متا](https://developers.facebook.com/docs/messenger-platform/instagram/features/send-message) را قبل از فعال‌سازی ببینید — سیاست‌ها تغییر می‌کنند.
+- **کامنت‌ها**: پاسخ‌ها از Comments API استفاده می‌کنند؛ پنجره پیام‌رسانی اعمال نمی‌شود.
 
 ---
 
-## 🤖 The AI Response Layer
+## 🤖 لایه پاسخگویی هوش مصنوعی
 
-When a rule's `responseType` is `ai_generated` — or no rule matches and AI fallback is enabled — the background worker:
+وقتی `responseType` یک قانون `ai_generated` است — یا هیچ قانونی تطابق ندارد و fallback هوش مصنوعی فعال است — ورکر پس‌زمینه:
 
-1. **Builds the system prompt** from two parts:
-   - **(a) A fixed Core block** (tone rules, escalation rules, output format, safety constraints) — written once, reused across all tenants, never edited by tenants.
-   - **(b) The tenant's Business Context form** serialized into the prompt (business name, tone, products, services, FAQs, pricing visibility, purchase link, working hours, special rules).
-2. **Calls the LLM** (z-ai-web-dev-sdk / GLM) with the incoming message as user input, requesting strict JSON:
+1. **پرامپت سیستم را از دو بخش می‌سازد**:
+   - **(الف) یک بلوک Core ثابت** (قوانین لحن، قوانین ارجاع، فرمت خروجی، محدودیت‌های ایمنی) — یک‌بار نوشته شده، در همه مستاجران استفاده می‌شود، هرگز توسط مستاجران ویرایش نمی‌شود.
+   - **(ب) داده فرم زمینه کسب‌وکار مستاجر** که در پرامپت serialize می‌شود (نام کسب‌وکار، لحن، محصولات، خدمات، سؤالات متداول، دیدگی قیمت، لینک خرید، ساعات کاری، قوانین خاص).
+2. **LLM را صدا می‌زند** (z-ai-web-dev-sdk / GLM) با پیام ورودی به‌عنوان ورودی کاربر، درخواست JSON سخت‌گیرانه:
    ```json
    { "reply": "...", "intent": "...", "escalate": false, "suggestedAction": "..." }
    ```
-3. **Parses robustly** — strips markdown code fences, extracts the first JSON object, validates shape, and falls back to a generic holding reply on malformed output.
-4. **Escalation** — if `escalate: true`, the AI's reply (or a holding message) is still sent, **and** the conversation is flagged in the dashboard for human follow-up. Never fails silently.
-5. **Sends the reply** back to Instagram via the Send API (DMs) or Comments API (comment replies).
+3. **به‌خوبی parse می‌کند** — fenceهای markdown را حذف می‌کند، اولین آبجکت JSON را استخراج می‌کند، شکل را تأیید می‌کند و در صورت malformed بودن به یک پاسخ نگه‌دارنده عمومی fallback می‌کند.
+4. **ارجاع** — اگر `escalate: true` باشد، پاسخ هوش مصنوعی (یا یک پیام نگه‌دارنده) همچنان ارسال می‌شود، **و** گفتگو در داشبورد برای پیگیری انسانی پرچم‌گذاری می‌شود. هرگز بی‌صدا شکست نمی‌خورد.
+5. **پاسخ را ارسال می‌کند** به اینستاگرام از طریق Send API (دایرکت) یا Comments API (پاسخ کامنت).
 
-> **Safety by design:** tenants configure a *structured* Business Context form — they never touch the raw system prompt. This keeps behavior consistent, on-brand, and prevents prompt injection / leakage.
+> **ایمنی به‌طراحی:** مستاجران یک فرم *ساختاریافته* زمینه کسب‌وکار را پیکربندی می‌کنند — آن‌ها هرگز پرامپت سیستم خام را لمس نمی‌کنند. این کار رفتار را یکپارچه، روی‌برند نگه می‌دارد و از prompt injection / leakage جلوگیری می‌کند.
 
 ---
 
-## 🗂️ Project Structure
+## 🗂️ ساختار پروژه
 
 ```
 src/
 ├── app/
-│   ├── api/                      # API routes (all tenant-scoped via session)
-│   │   ├── auth/[...nextauth]/   # NextAuth handler
-│   │   ├── auth/register/        # Sign up (creates tenant + admin user)
+│   ├── api/                      # مسیرهای API (همه محدوده‌شده با tenant از طریق session)
+│   │   ├── auth/[...nextauth]/   # هندلر NextAuth
+│   │   ├── auth/register/        # ثبت‌نام (ایجاد مستاجر + کاربر ادمین)
 │   │   ├── instagram/
-│   │   │   ├── oauth/{start,callback}/  # OAuth flow (real + demo)
-│   │   │   ├── webhook/          # GET verify + POST signature-checked ingest
-│   │   │   ├── accounts/         # List/disconnect accounts
-│   │   │   └── simulate/         # Demo: inject a simulated inbound
-│   │   ├── dashboard/stats/      # Overview KPIs
-│   │   ├── rules/                # CRUD + reorder + preview/tester
-│   │   ├── conversations/        # List + detail + manual reply
-│   │   ├── leads/                # CRUD + CSV export
+│   │   │   ├── oauth/{start,callback}/  # flow اوآث (واقعی + دمو)
+│   │   │   ├── webhook/          # GET تأیید + POST ingest با تأیید امضا
+│   │   │   ├── accounts/         # فهرست/قطع اکانت‌ها
+│   │   │   └── simulate/         # دمو: تزریق یک inbound شبیه‌سازی‌شده
+│   │   ├── dashboard/stats/      # KPIهای کلی
+│   │   ├── rules/                # CRUD + تغییر ترتیب + پیش‌نمایش/تستر
+│   │   ├── conversations/        # فهرست + جزئیات + پاسخ دستی
+│   │   ├── leads/                # CRUD + خروجی CSV
 │   │   ├── ai-config/[igAccountId]/
 │   │   ├── analytics/
 │   │   ├── billing/
 │   │   └── tenant/
 │   ├── layout.tsx                # Providers (Session, Theme, QueryClient)
-│   ├── page.tsx                  # Root: session gate → AppShell | Login
-│   └── globals.css               # Rose/fuchsia theme + utilities
+│   ├── page.tsx                  # ریشه: session gate → AppShell | Login
+│   └── globals.css               # پالت رز/فوشیا + utilityها
 ├── components/
-│   ├── ui/                       # shadcn/ui (pre-installed)
-│   ├── app-shell.tsx             # Session gate + view router + sticky footer
-│   ├── app-sidebar.tsx           # Responsive nav
-│   ├── app-topbar.tsx            # Account selector + theme + user menu
-│   ├── login-screen.tsx          # Split-screen auth + demo login
+│   ├── ui/                       # shadcn/ui (پیش‌نصب‌شده)
+│   ├── app-shell.tsx             # session gate + router view + footer چسبان
+│   ├── app-sidebar.tsx           # ناوبری واکنش‌گرا (راست در RTL)
+│   ├── app-topbar.tsx            # انتخابگر اکانت + تم + منوی کاربر
+│   ├── login-screen.tsx          # احراز هویت split-screen + ورود دمو
 │   ├── providers.tsx
 │   ├── theme-toggle.tsx
-│   └── views/                    # The 8 dashboard views
+│   └── views/                    # ۸ view داشبورد
 │       ├── dashboard-view.tsx
 │       ├── inbox-view.tsx
 │       ├── rules-view.tsx
@@ -201,36 +203,37 @@ src/
 │       ├── billing-view.tsx
 │       └── settings-view.tsx
 ├── lib/
-│   ├── db.ts                     # Prisma client
-│   ├── env.ts                    # Centralized env + demo-mode detection
-│   ├── crypto.ts                 # AES-256-GCM encrypt/decrypt, scrypt hashing, HMAC verify
-│   ├── instagram.ts              # OAuth, token exchange, send DM/reply, token refresh
-│   ├── ai.ts                     # CORE prompt + business-context serialization + LLM call
-│   ├── rule-engine.ts            # Keyword/any_dm/any_comment/story_reply matching
-│   ├── worker.ts                 # Webhook payload parsing + per-event processing + leads
-│   ├── queue.ts                  # In-memory queue (BullMQ replacement) + crash recovery
-│   ├── auth.ts                   # NextAuth config (credentials + JWT)
-│   ├── session.ts                # getTenantContext / requireTenant helpers
-│   ├── constants.ts              # Enums, labels, plans
-│   ├── format.ts                 # Date/number/tag helpers
-│   ├── api-client.ts             # Frontend fetch wrapper
-│   └── store.ts                  # zustand (active view + selected account)
-├── hooks/use-api.ts              # react-query hooks
-├── types/                        # Shared DTOs + NextAuth augmentation
-└── instrumentation.ts            # Boots the queue worker on server start
+│   ├── db.ts                     # کلاینت Prisma
+│   ├── env.ts                    # env مرکزی + تشخیص حالت دمو
+│   ├── crypto.ts                 # encrypt/decrypt AES-256-GCM، hashing scrypt، تأیید HMAC
+│   ├── instagram.ts              # اوآث، تعویض توکن، ارسال دایرکت/پاسخ، بازخوانی توکن
+│   ├── ai.ts                     # پرامپت CORE + serialization زمینه کسب‌وکار + صدا زدن LLM
+│   ├── rule-engine.ts            # تطبیق keyword/any_dm/any_comment/story_reply
+│   ├── worker.ts                 # parse payload وب‌هوک + پردازش هر رویداد + سرنخ‌ها
+│   ├── queue.ts                  # صف درون‌حافظه‌ای (جایگزین BullMQ) + بازیابی پس از کرش
+│   ├── auth.ts                   # کانفیگ NextAuth (credentials + JWT)
+│   ├── session.ts                # helperهای getTenantContext / requireTenant
+│   ├── constants.ts              # enumها، برچسب‌ها، طرح‌ها (فارسی)
+│   ├── i18n.ts                   # واژه‌نامه فارسی متمرکز + کمک‌تابع‌های تاریخ/عدد شمسی
+│   ├── format.ts                 # helperهای تاریخ/عدد/برچسب (فارسی)
+│   ├── api-client.ts             # wrapper fetch سمت frontend
+│   └── store.ts                  # zustand (view فعال + اکانت انتخاب‌شده)
+├── hooks/use-api.ts              # hookهای react-query
+├── types/                        # DTOهای مشترک + augmentation NextAuth
+└── instrumentation.ts            # ورکر صف را هنگام شروع سرور boot می‌کند
 
 prisma/schema.prisma              # Tenant, User, InstagramAccount, AiConfig,
                                  # AutomationRule, ConversationLog, Lead,
                                  # Subscription, WebhookEvent
-scripts/seed.ts                   # Demo data
+scripts/seed.ts                   # داده دمو (فارسی)
 ```
 
 ---
 
-## 🧪 Testing notes
-The most failure-prone parts — **webhook signature verification** (`src/lib/crypto.ts → verifyHubSignature`) and **rule matching** (`src/lib/rule-engine.ts → matchRule`) — are isolated as pure functions so they can be unit-tested directly. In demo mode, signature verification is skipped so simulated events can exercise the full pipeline end-to-end (use the **"Try it live"** widget on the dashboard or the **Simulator** tab in Settings).
+## 🧪 یادداشت‌های تست
+بخش‌های مستعد خطا — **تأیید امضای وب‌هوک** (`src/lib/crypto.ts → verifyHubSignature`) و **تطبیق قانون** (`src/lib/rule-engine.ts → matchRule`) — به‌عنوان توابع خالص ایزوله شده‌اند تا مستقیماً unit-test شوند. در حالت دمو، تأیید امضا skip می‌شود تا رویدادهای شبیه‌سازی‌شده بتوانند کل pipeline را end-to-end اجرا کنند (از ویجت **«به‌صورت زنده امتحان کنید 🎬»** در داشبورد یا تب **شبیه‌ساز** در تنظیمات استفاده کنید).
 
 ---
 
-## 📄 License
-MIT — build on top of it, swap in your own billing/AI provider, ship it.
+## 📄 لایسنس
+MIT — روی آن بسازید، billing/AI provider خود را جایگزین کنید، منتشر کنید.

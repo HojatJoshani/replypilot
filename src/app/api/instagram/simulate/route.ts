@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     parsed.data.accountId,
     parsed.data.channel,
     parsed.data.message,
-    { id: "sim_" + Date.now(), username: parsed.data.fromUsername || "demo_customer" },
+    { id: "sim_" + Date.now(), username: parsed.data.fromUsername || "مشتری_دمو" },
   );
   return NextResponse.json({ ok: true, eventId: id });
 }
