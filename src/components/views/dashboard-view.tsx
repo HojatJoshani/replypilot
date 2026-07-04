@@ -10,7 +10,7 @@ import {
   AlertCircle,
   UserPlus,
   Gauge,
-  ArrowRight,
+  ArrowLeft,
   MessageCircle,
   RefreshCw,
   Send,
@@ -47,11 +47,29 @@ import {
 import { useApi, useApiMutation } from "@/hooks/use-api";
 import { useAppStore, type ViewId } from "@/lib/store";
 import { api } from "@/lib/api-client";
-import { compactNumber, initials, timeAgo } from "@/lib/format";
-import { CHANNELS, PLANS, labelFor } from "@/lib/constants";
+import { initials } from "@/lib/format";
+import {
+  t,
+  faCompact,
+  faNumber,
+  toFa,
+  faTimeAgo,
+  faTimeUntil,
+} from "@/lib/i18n";
+import { CHANNELS, PLANS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { ConversationDto, DashboardStatsDto } from "@/types";
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function channelLabel(channel: string): string {
+  if (channel === "comment") return t.channels.comment;
+  if (channel === "story") return t.channels.story;
+  return t.channels.dm;
+}
 
 /* ------------------------------------------------------------------ */
 /* Empty state — no Instagram account connected yet                   */
@@ -67,7 +85,7 @@ function NoAccountEmptyState() {
       );
       window.location.href = url;
     } catch {
-      toast.error("Could not start Instagram connection. Please try again.");
+      toast.error("اتصال اینستاگرام آغاز نشد. دوباره امتحان کنید.");
       setConnecting(false);
     }
   }
@@ -80,26 +98,25 @@ function NoAccountEmptyState() {
               <Sparkles className="h-8 w-8" />
             </div>
             <h2 className="text-2xl font-bold tracking-tight">
-              Connect your Instagram account
+              {t.dashboard.noAccount}
             </h2>
             <p className="mt-2 text-sm text-white/90">
-              ReplyPilot needs at least one Instagram account to start
-              automating DMs, comments, and story replies.
+              {t.dashboard.noAccountDesc}
             </p>
           </div>
           <CardContent className="px-6 pt-6">
             <ul className="mb-6 space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-                Auto-reply to FAQs in seconds — even while you sleep.
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                پاسخ خودکار به سؤالات متداول در چند ثانیه — حتی وقتی خوابید.
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-                Capture leads automatically from your comments and DMs.
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                ثبت خودکار سرنخ از کامنت‌ها و دایرکت‌های شما.
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-                Escalate sensitive conversations to your team inbox.
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                ارجاع گفتگوهای حساس به صندوق پیام تیم شما.
               </li>
             </ul>
             <Button
@@ -111,17 +128,17 @@ function NoAccountEmptyState() {
               {connecting ? (
                 <>
                   <RefreshCw className="h-4 w-4 animate-spin" />
-                  Connecting…
+                  در حال اتصال…
                 </>
               ) : (
                 <>
                   <PlusCircle className="h-4 w-4" />
-                  Connect Instagram
+                  {t.dashboard.connectInstagram}
                 </>
               )}
             </Button>
             <p className="mt-3 text-center text-[11px] text-muted-foreground">
-              Demo mode — no real Meta permissions are required.
+              حالت دمو — هیچ دسترسی واقعی متا لازم نیست.
             </p>
           </CardContent>
         </Card>
@@ -169,13 +186,16 @@ function KpiCard({
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="text-[11px] font-medium tracking-wide text-muted-foreground">
               {label}
             </div>
             {loading ? (
               <Skeleton className="mt-2 h-7 w-20" />
             ) : (
-              <div className="mt-1 truncate text-2xl font-bold tracking-tight">
+              <div
+                dir="ltr"
+                className="mt-1 truncate text-2xl font-bold tracking-tight"
+              >
                 {value}
               </div>
             )}
@@ -222,16 +242,10 @@ function ChannelIcon({
 
 function accountStatusMeta(status: string) {
   if (status === "active")
-    return { dot: "bg-emerald-500", label: "Connected", color: "text-emerald-600" };
+    return { dot: "bg-emerald-500", label: t.dashboard.connected, color: "text-emerald-600" };
   if (status === "expired")
-    return { dot: "bg-amber-500", label: "Token expired", color: "text-amber-600" };
-  return { dot: "bg-muted-foreground", label: "Disconnected", color: "text-muted-foreground" };
-}
-
-function daysUntil(dateStr: string | null): number | null {
-  if (!dateStr) return null;
-  const ms = new Date(dateStr).getTime() - Date.now();
-  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+    return { dot: "bg-amber-500", label: t.dashboard.expired, color: "text-amber-600" };
+  return { dot: "bg-muted-foreground", label: "قطع‌شده", color: "text-muted-foreground" };
 }
 
 function AccountHealthCard({
@@ -246,11 +260,9 @@ function AccountHealthCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <CircleDot className="h-4 w-4 text-primary" />
-          Account health
+          {t.dashboard.accountHealth}
         </CardTitle>
-        <CardDescription>
-          Status and token refresh window for your connected accounts.
-        </CardDescription>
+        <CardDescription>{t.dashboard.accountHealthDesc}</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -261,22 +273,24 @@ function AccountHealthCard({
           </div>
         ) : health.length === 0 ? (
           <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-            No accounts connected yet.
+            هنوز حسابی متصل نشده است.
           </div>
         ) : (
           <ul className="max-h-72 space-y-1 overflow-y-auto scrollbar-thin">
             {health.map((a) => {
               const meta = accountStatusMeta(a.status);
-              const days = daysUntil(a.tokenExpiresAt);
               const renewingSoon =
-                a.status === "active" && days !== null && days <= 7;
+                a.status === "active" && a.tokenExpiresAt
+                  ? new Date(a.tokenExpiresAt).getTime() - Date.now() <=
+                    7 * 24 * 60 * 60 * 1000
+                  : false;
               return (
                 <li
                   key={a.id}
                   className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-accent/50"
                 >
                   <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", meta.dot)} />
-                  <span className="flex-1 truncate text-sm font-medium">
+                  <span className="flex-1 truncate text-sm font-medium" dir="ltr">
                     @{a.username}
                   </span>
                   {renewingSoon && (
@@ -284,17 +298,11 @@ function AccountHealthCard({
                       variant="outline"
                       className="border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
                     >
-                      Renewing soon
+                      {t.dashboard.renewingSoon}
                     </Badge>
                   )}
                   <span className="hidden text-xs text-muted-foreground sm:inline">
-                    {a.tokenExpiresAt
-                      ? days !== null
-                        ? days < 0
-                          ? "expired"
-                          : `expires in ${days}d`
-                        : timeAgo(a.tokenExpiresAt)
-                      : "no expiry"}
+                    {a.tokenExpiresAt ? faTimeUntil(a.tokenExpiresAt) : "بدون انقضا"}
                   </span>
                   <span className={cn("text-xs font-medium", meta.color)}>
                     {meta.label}
@@ -329,13 +337,15 @@ function RecentConversationsCard({
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
               <InboxIcon className="h-4 w-4 text-primary" />
-              Recent conversations
+              {t.dashboard.recentConversations}
             </CardTitle>
-            <CardDescription>Latest 5 inbound events handled.</CardDescription>
+            <CardDescription>
+              آخرین ۵ رویداد ورودی پردازش‌شده.
+            </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={onViewAll} className="shrink-0">
-            View all
-            <ArrowRight className="h-3.5 w-3.5" />
+            {t.common.viewAll}
+            <ArrowLeft className="h-3.5 w-3.5" />
           </Button>
         </div>
       </CardHeader>
@@ -349,9 +359,9 @@ function RecentConversationsCard({
         ) : conversations.length === 0 ? (
           <div className="rounded-lg border border-dashed py-10 text-center">
             <MessageCircle className="mx-auto h-8 w-8 text-muted-foreground/60" />
-            <p className="mt-2 text-sm font-medium">No conversations yet</p>
+            <p className="mt-2 text-sm font-medium">{t.inbox.noConversations}</p>
             <p className="text-xs text-muted-foreground">
-              New DMs, comments and story replies will show up here.
+              دایرکت‌ها، کامنت‌ها و ریپلای استوری‌های جدید اینجا نمایش داده می‌شوند.
             </p>
           </div>
         ) : (
@@ -368,8 +378,8 @@ function RecentConversationsCard({
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">
-                      @{c.contactUsername || "unknown"}
+                    <span className="truncate text-sm font-medium" dir="ltr">
+                      {c.contactUsername ? `@${c.contactUsername}` : "ناشناس"}
                     </span>
                     <ChannelIcon
                       channel={c.channel}
@@ -381,11 +391,11 @@ function RecentConversationsCard({
                         className="border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
                       >
                         <AlertCircle className="h-3 w-3" />
-                        Escalated
+                        {t.convoStatus.escalated}
                       </Badge>
                     )}
-                    <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
-                      {timeAgo(c.createdAt)}
+                    <span className="ms-auto shrink-0 text-[11px] text-muted-foreground">
+                      {faTimeAgo(c.createdAt)}
                     </span>
                   </div>
                   <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
@@ -395,7 +405,7 @@ function RecentConversationsCard({
                     {c.wasAiGenerated ? (
                       <Badge className="gap-1 bg-primary/10 text-primary hover:bg-primary/15">
                         <Sparkles className="h-3 w-3" />
-                        AI reply
+                        {t.inbox.aiReply}
                       </Badge>
                     ) : c.matchedRuleName ? (
                       <Badge variant="secondary" className="gap-1">
@@ -403,11 +413,11 @@ function RecentConversationsCard({
                         {c.matchedRuleName}
                       </Badge>
                     ) : (
-                      <Badge variant="outline">Auto</Badge>
+                      <Badge variant="outline">{t.convoStatus.auto}</Badge>
                     )}
                     {c.intent && (
-                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {c.intent}
+                      <span className="text-[10px] tracking-wide text-muted-foreground">
+                        {intentLabelShort(c.intent)}
                       </span>
                     )}
                   </div>
@@ -421,16 +431,22 @@ function RecentConversationsCard({
   );
 }
 
+/** Map a raw intent value to its Persian label. */
+function intentLabelShort(intent: string): string {
+  const map = t.intents as Record<string, string>;
+  return map[intent] || intent;
+}
+
 /* ------------------------------------------------------------------ */
 /* Simulate inbound widget — the wow-factor feature                   */
 /* ------------------------------------------------------------------ */
 
 const EXAMPLE_CHIPS = [
   "سلام، قیمت سرم ویتامین سی چنده؟",
-  "what are your hours?",
-  "I want a refund",
-  "do you ship internationally?",
-  "can I book an appointment?",
+  "ساعات کاری شما؟",
+  "می‌خوام وجه رو پس بگیرم",
+  "ارسال بین‌المللی دارید؟",
+  "می‌تونم نوبت بگیرم؟",
 ];
 
 interface SimulateResult {
@@ -459,7 +475,7 @@ function SimulateInboundCard({ accountId }: { accountId: string }) {
 
   async function handleSend() {
     if (!message.trim()) {
-      toast.error("Type a message to simulate.");
+      toast.error("یک پیام برای شبیه‌سازی بنویسید.");
       return;
     }
     setResult(null);
@@ -470,7 +486,7 @@ function SimulateInboundCard({ accountId }: { accountId: string }) {
         channel,
         message: message.trim(),
       });
-      toast.success("Inbound message injected — automation running…");
+      toast.success(t.dashboard.running);
       // Give the queue/worker a beat to process the event, then refetch.
       pollTimer.current = setTimeout(async () => {
         try {
@@ -488,7 +504,7 @@ function SimulateInboundCard({ accountId }: { accountId: string }) {
       }, 1500);
     } catch (err) {
       setPolling(false);
-      const msg = err instanceof Error ? err.message : "Simulate failed";
+      const msg = err instanceof Error ? err.message : "شبیه‌سازی ناموفق بود";
       toast.error(msg);
     }
   }
@@ -501,11 +517,10 @@ function SimulateInboundCard({ accountId }: { accountId: string }) {
         <div className="flex items-center gap-2">
           <span className="text-lg">🎬</span>
           <div>
-            <CardTitle className="text-base text-white">Try it live</CardTitle>
-            <p className="text-xs text-white/85">
-              Simulate an inbound Instagram message and watch ReplyPilot respond
-              in real time.
-            </p>
+            <CardTitle className="text-base text-white">
+              {t.dashboard.tryLive}
+            </CardTitle>
+            <p className="text-xs text-white/85">{t.dashboard.tryLiveDesc}</p>
           </div>
         </div>
       </div>
@@ -513,7 +528,7 @@ function SimulateInboundCard({ accountId }: { accountId: string }) {
         <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground" htmlFor="sim-channel">
-              Channel
+              {t.dashboard.channel}
             </label>
             <Select
               value={channel}
@@ -533,13 +548,13 @@ function SimulateInboundCard({ accountId }: { accountId: string }) {
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground" htmlFor="sim-message">
-              Message
+              {t.dashboard.message}
             </label>
             <Input
               id="sim-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type a message a customer might send…"
+              placeholder="پیامی که یک مشتری ممکن است بفرستد…"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !busy) handleSend();
               }}
@@ -568,12 +583,12 @@ function SimulateInboundCard({ accountId }: { accountId: string }) {
           {busy ? (
             <>
               <RefreshCw className="h-4 w-4 animate-spin" />
-              {simulate.isPending ? "Injecting…" : "Watching automation…"}
+              {simulate.isPending ? "در حال تزریق…" : "در حال مشاهده خودکارسازی…"}
             </>
           ) : (
             <>
               <Send className="h-4 w-4" />
-              Send &amp; watch
+              {t.dashboard.sendWatch}
             </>
           )}
         </Button>
@@ -585,9 +600,9 @@ function SimulateInboundCard({ accountId }: { accountId: string }) {
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
                 <CheckCircle2 className="h-4 w-4" />
               </span>
-              <span className="text-sm font-semibold">Automation responded</span>
-              <span className="ml-auto text-[11px] text-muted-foreground">
-                {timeAgo(new Date(result.at))}
+              <span className="text-sm font-semibold">خودکارسازی پاسخ داد</span>
+              <span className="ms-auto text-[11px] text-muted-foreground">
+                {faTimeAgo(new Date(result.at))}
               </span>
             </div>
             <ConversationBubble conversation={result.conversation} />
@@ -602,7 +617,7 @@ function SimulateInboundCard({ accountId }: { accountId: string }) {
 function ConversationBubble({ conversation: c }: { conversation: ConversationDto }) {
   return (
     <div className="space-y-2">
-      {/* Inbound */}
+      {/* Inbound — customer (start side in RTL = right) */}
       <div className="flex items-start gap-2">
         <Avatar className="h-7 w-7">
           <AvatarFallback className="ig-gradient-soft text-[10px] font-semibold">
@@ -611,23 +626,27 @@ function ConversationBubble({ conversation: c }: { conversation: ConversationDto
         </Avatar>
         <div className="max-w-[80%]">
           <div className="text-[10px] text-muted-foreground">
-            @{c.contactUsername || "unknown"} ·{" "}
-            {labelFor(CHANNELS, c.channel)}
+            {c.contactUsername ? (
+              <span dir="ltr">@{c.contactUsername}</span>
+            ) : (
+              "ناشناس"
+            )}{" "}
+            · {channelLabel(c.channel)}
           </div>
-          <div className="rounded-2xl rounded-tl-sm bg-background px-3 py-2 text-sm shadow-sm">
+          <div className="rounded-2xl rounded-ts-sm bg-background px-3 py-2 text-sm shadow-sm">
             {c.inboundMessage}
           </div>
         </div>
       </div>
-      {/* Outbound */}
+      {/* Outbound — our reply (end side in RTL = left) */}
       {c.outboundMessage ? (
         <div className="flex items-start justify-end gap-2">
-          <div className="max-w-[80%] text-right">
+          <div className="max-w-[80%] text-start">
             <div className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
               {c.wasAiGenerated ? (
                 <>
                   <Sparkles className="h-3 w-3 text-primary" />
-                  AI reply
+                  {t.dashboard.reply}
                 </>
               ) : c.matchedRuleName ? (
                 <>
@@ -635,10 +654,10 @@ function ConversationBubble({ conversation: c }: { conversation: ConversationDto
                   {c.matchedRuleName}
                 </>
               ) : (
-                "ReplyPilot"
+                t.brand
               )}
             </div>
-            <div className="rounded-2xl rounded-tr-sm ig-gradient px-3 py-2 text-left text-sm text-white shadow-sm">
+            <div className="rounded-2xl rounded-te-sm ig-gradient px-3 py-2 text-start text-sm text-white shadow-sm">
               {c.outboundMessage}
             </div>
           </div>
@@ -655,7 +674,7 @@ function ConversationBubble({ conversation: c }: { conversation: ConversationDto
             className="border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
           >
             <AlertCircle className="h-3 w-3" />
-            Escalated to your team
+            به تیم شما ارجاع داده شد
           </Badge>
         </div>
       ) : null}
@@ -679,16 +698,15 @@ function AiUsageCard({
   const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   const healthy = pct < 80;
   const nearLimit = pct >= 80 && pct < 100;
+  const unlimited = limit >= 999999;
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Gauge className="h-4 w-4 text-primary" />
-          AI usage this period
+          {t.dashboard.aiUsageTitle}
         </CardTitle>
-        <CardDescription>
-          GLM-powered replies used against your plan limit.
-        </CardDescription>
+        <CardDescription>{t.dashboard.aiUsageDesc}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {loading ? (
@@ -707,14 +725,17 @@ function AiUsageCard({
             />
             <div className="flex items-end justify-between">
               <div>
-                <div className="text-2xl font-bold tracking-tight">
-                  {compactNumber(used)}{" "}
+                <div
+                  dir="ltr"
+                  className="text-2xl font-bold tracking-tight"
+                >
+                  {faNumber(used)}{" "}
                   <span className="text-base font-medium text-muted-foreground">
-                    / {limit >= 999999 ? "∞" : compactNumber(limit)}
+                    / {unlimited ? "∞" : faNumber(limit)}
                   </span>
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  {pct}% of monthly allowance used
+                  {toFa(pct)}٪ از سهمیه ماهانه استفاده شد
                 </div>
               </div>
               {nearLimit && (
@@ -722,11 +743,19 @@ function AiUsageCard({
                   variant="outline"
                   className="border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
                 >
-                  Approaching limit
+                  {t.dashboard.approachingLimit}
                 </Badge>
               )}
               {!healthy && !nearLimit && pct >= 100 && (
-                <Badge variant="destructive">Limit reached</Badge>
+                <Badge variant="destructive">محدودیت تکمیل شد</Badge>
+              )}
+              {unlimited && (
+                <Badge
+                  variant="outline"
+                  className="border-emerald-300 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                >
+                  {t.dashboard.unlimited}
+                </Badge>
               )}
             </div>
           </>
@@ -742,10 +771,10 @@ function AiUsageCard({
 
 function QuickActions({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
   const actions = [
-    { label: "New rule", icon: Workflow, view: "rules" as const },
-    { label: "Configure AI", icon: Bot, view: "ai-config" as const },
-    { label: "View leads", icon: UsersRound, view: "leads" as const },
-    { label: "Analytics", icon: BarChart3, view: "analytics" as const },
+    { label: t.dashboard.newRule, icon: Workflow, view: "rules" as const },
+    { label: t.dashboard.configAi, icon: Bot, view: "ai-config" as const },
+    { label: t.dashboard.viewLeads, icon: UsersRound, view: "leads" as const },
+    { label: t.dashboard.analytics, icon: BarChart3, view: "analytics" as const },
   ];
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -784,10 +813,9 @@ export function DashboardView() {
   );
 
   const planLabel = useMemo(() => {
-    // We don't have the plan name directly; derive from aiRepliesLimit when possible.
     const lim = stats.data?.aiRepliesLimit;
     const plan = PLANS.find((p) => p.limits.aiReplies === lim);
-    return plan?.label ?? "Current";
+    return plan?.label ?? "فعلی";
   }, [stats.data?.aiRepliesLimit]);
 
   if (!selectedAccountId) return <NoAccountEmptyState />;
@@ -800,85 +828,82 @@ export function DashboardView() {
       {/* Header */}
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-          Dashboard
+          {t.dashboard.title}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          A live overview of your Instagram automation, account health and
-          recent activity.
-        </p>
+        <p className="text-sm text-muted-foreground">{t.dashboard.subtitle}</p>
       </header>
 
       {/* KPI grid */}
       <section
-        aria-label="Key performance indicators"
+        aria-label="شاخص‌های کلیدی عملکرد"
         className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
       >
         <KpiCard
-          label="Accounts"
-          value={s ? s.accounts : 0}
+          label={t.dashboard.kpi.accounts}
+          value={s ? toFa(s.accounts) : toFa(0)}
           icon={Users}
           accent="primary"
-          hint="Connected"
+          hint={t.dashboard.connected}
           loading={loading}
         />
         <KpiCard
-          label="Active rules"
-          value={s ? s.activeRules : 0}
+          label={t.dashboard.kpi.activeRules}
+          value={s ? toFa(s.activeRules) : toFa(0)}
           icon={Workflow}
           accent="violet"
-          hint="Running automations"
+          hint="خودکارسازی فعال"
           loading={loading}
         />
         <KpiCard
-          label="Conversations today"
-          value={s ? compactNumber(s.conversationsToday) : 0}
+          label={t.dashboard.kpi.convToday}
+          value={s ? faCompact(s.conversationsToday) : toFa(0)}
           icon={MessageSquare}
           accent="emerald"
-          hint="Since midnight"
+          hint="از نیمه‌شب"
           loading={loading}
         />
         <KpiCard
-          label="Conversations 30d"
-          value={s ? compactNumber(s.conversations30d) : 0}
+          label={t.dashboard.kpi.conv30d}
+          value={s ? faCompact(s.conversations30d) : toFa(0)}
           icon={History}
           accent="sky"
-          hint="Last 30 days"
+          hint="۳۰ روز اخیر"
           loading={loading}
         />
         <KpiCard
-          label="AI replies 30d"
-          value={s ? compactNumber(s.aiReplies30d) : 0}
+          label={t.dashboard.kpi.aiReplies30d}
+          value={s ? faCompact(s.aiReplies30d) : toFa(0)}
           icon={Sparkles}
           accent="rose"
-          hint="Generated by GLM"
+          hint="تولیدشده با GLM"
           loading={loading}
         />
         <KpiCard
-          label="Needs follow-up"
-          value={s ? compactNumber(s.escalatedOpen) : 0}
+          label={t.dashboard.kpi.escalated}
+          value={s ? toFa(s.escalatedOpen) : toFa(0)}
           icon={AlertCircle}
           accent="amber"
-          hint="Open escalations"
+          hint="ارجاع‌های باز"
           loading={loading}
         />
         <KpiCard
-          label="New leads"
-          value={s ? compactNumber(s.leadsNew) : 0}
+          label={t.dashboard.kpi.leadsNew}
+          value={s ? toFa(s.leadsNew) : toFa(0)}
           icon={UserPlus}
           accent="emerald"
-          hint="Status: new"
+          hint="وضعیت: جدید"
           loading={loading}
         />
         <KpiCard
-          label="AI usage"
+          label={t.dashboard.kpi.aiUsage}
           value={
             s
-              ? `${compactNumber(s.aiRepliesUsed)}/${s.aiRepliesLimit >= 999999 ? "∞" : compactNumber(s.aiRepliesLimit)}`
-              : "0"
+              ? `${faNumber(s.aiRepliesUsed)}/${s.aiRepliesLimit >= 999999 ? "∞" : faNumber(s.aiRepliesLimit)}`
+              : toFa(0)
           }
           icon={Zap}
           accent="primary"
-          hint={planLabel + " plan"}
+          hint={`طرح ${planLabel}`}
           loading={loading}
         />
       </section>
@@ -907,10 +932,10 @@ export function DashboardView() {
       </section>
 
       {/* Quick actions */}
-      <section aria-label="Quick actions">
+      <section aria-label="اقدامات سریع">
         <div className="mb-2 flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-semibold">Quick actions</h2>
+          <h2 className="text-sm font-semibold">{t.dashboard.quickActions}</h2>
         </div>
         <QuickActions onNavigate={setView} />
       </section>

@@ -6,7 +6,8 @@ import { useApi, useApiMutation } from "@/hooks/use-api";
 import { api } from "@/lib/api-client";
 import type { ConversationDto } from "@/types";
 import { CHANNELS, CONVERSATION_STATUSES, labelFor } from "@/lib/constants";
-import { timeAgo, fmtDateTime, initials } from "@/lib/format";
+import { faTimeAgo, faDateTime, initials } from "@/lib/format";
+import { t, toFa } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ import {
   Inbox as InboxIcon,
   Instagram,
   Plus,
-  ArrowLeft,
+  ArrowRight,
   Sparkles,
   Lightbulb,
 } from "lucide-react";
@@ -52,12 +53,12 @@ type DetailResp = {
   thread: ConversationDto[];
 };
 
+const INTENTS = t.intents as unknown as Record<string, string>;
+
 function statusDotClass(status: string): string {
   const s = CONVERSATION_STATUSES.find((x) => x.value === status);
   if (!s) return "bg-muted-foreground";
-  // strip text-*; we just want the bg
   const bg = s.color.split(" ").find((c) => c.startsWith("bg-")) || "bg-muted-foreground";
-  // normalize common bg-emerald-100 etc -> use 500 series dots
   return bg.replace(/-100$/, "-500").replace(/-200$/, "-500");
 }
 
@@ -83,7 +84,7 @@ function GradientAvatar({
   return (
     <Avatar className={size}>
       <AvatarFallback className="ig-gradient text-white text-xs font-semibold">
-        {initials(name) || "?"}
+        {initials(name) || "؟"}
       </AvatarFallback>
     </Avatar>
   );
@@ -95,7 +96,7 @@ function ConnectAccountCta() {
       const { url } = await api.get<{ url: string }>("/api/instagram/oauth/start");
       window.location.href = url;
     } catch {
-      toast.error("Could not start Instagram connection");
+      toast.error("شروع اتصال به اینستاگرام ناموفق بود");
     }
   }
   return (
@@ -104,14 +105,14 @@ function ConnectAccountCta() {
         <Instagram className="h-10 w-10 text-primary" />
       </div>
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Connect an Instagram account</h3>
+        <h3 className="text-lg font-semibold">یک حساب اینستاگرام متصل کنید</h3>
         <p className="text-sm text-muted-foreground max-w-sm">
-          Connect a business Instagram account to start receiving DMs, comments and story replies in your inbox.
+          برای دریافت دایرکت، کامنت و ریپلای استوری در صندوق پیام‌ها، یک حساب کسب‌وکار اینستاگرام متصل کنید.
         </p>
       </div>
       <Button onClick={connect} className="ig-gradient text-white">
         <Plus className="h-4 w-4" />
-        Connect Instagram
+        {t.settings.connectInstagram}
       </Button>
     </div>
   );
@@ -139,22 +140,22 @@ function FiltersBar({
   return (
     <div className="space-y-2 border-b p-3">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute start-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search messages or @username…"
-          className="pl-8"
-          aria-label="Search conversations"
+          placeholder={t.inbox.search}
+          className="ps-8"
+          aria-label={t.inbox.search}
         />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <Select value={channel} onValueChange={setChannel}>
-          <SelectTrigger className="h-8 text-xs" aria-label="Filter by channel">
-            <SelectValue placeholder="Channel" />
+          <SelectTrigger className="h-8 text-xs" aria-label={t.inbox.allChannels}>
+            <SelectValue placeholder={t.inbox.allChannels} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All channels</SelectItem>
+            <SelectItem value="all">{t.inbox.allChannels}</SelectItem>
             {CHANNELS.map((c) => (
               <SelectItem key={c.value} value={c.value}>
                 {c.label}
@@ -163,11 +164,11 @@ function FiltersBar({
           </SelectContent>
         </Select>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="h-8 text-xs" aria-label="Filter by status">
-            <SelectValue placeholder="Status" />
+          <SelectTrigger className="h-8 text-xs" aria-label={t.inbox.allStatuses}>
+            <SelectValue placeholder={t.inbox.allStatuses} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="all">{t.inbox.allStatuses}</SelectItem>
             {CONVERSATION_STATUSES.map((s) => (
               <SelectItem key={s.value} value={s.value}>
                 {s.label}
@@ -179,7 +180,7 @@ function FiltersBar({
       <div className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-2.5 py-1.5">
         <Label htmlFor="escalated-toggle" className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
           <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-          Needs follow-up
+          {t.inbox.needsFollowup}
         </Label>
         <Switch id="escalated-toggle" checked={escalatedOnly} onCheckedChange={setEscalatedOnly} />
       </div>
@@ -197,20 +198,21 @@ function ConversationListItem({
   onClick: () => void;
 }) {
   const { Icon } = channelMeta(convo.channel);
+  const username = convo.contactUsername || convo.contactIgId;
   return (
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full items-start gap-3 border-b px-3 py-3 text-left transition-colors hover:bg-accent/50",
+        "flex w-full items-start gap-3 border-b px-3 py-3 text-start transition-colors hover:bg-accent/50",
         active && "bg-accent",
       )}
       aria-current={active ? "true" : undefined}
     >
       <div className="relative shrink-0">
-        <GradientAvatar name={convo.contactUsername || convo.contactIgId} />
+        <GradientAvatar name={username} />
         <span
           className={cn(
-            "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
+            "absolute -bottom-0.5 -end-0.5 h-3 w-3 rounded-full border-2 border-background",
             statusDotClass(convo.status),
           )}
           aria-hidden
@@ -218,11 +220,11 @@ function ConversationListItem({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium">
-            @{convo.contactUsername || convo.contactIgId}
+          <span dir="ltr" className="truncate text-sm font-medium">
+            @{username}
           </span>
           <span className="shrink-0 text-[10px] text-muted-foreground">
-            {timeAgo(convo.createdAt)}
+            {faTimeAgo(convo.createdAt)}
           </span>
         </div>
         <div className="mt-0.5 flex items-center gap-1.5">
@@ -234,17 +236,17 @@ function ConversationListItem({
         <div className="mt-1.5 flex flex-wrap items-center gap-1">
           {convo.wasAiGenerated && (
             <Badge variant="secondary" className="gap-0.5 bg-primary/10 text-primary text-[10px] px-1.5 py-0">
-              <Bot className="h-2.5 w-2.5" /> AI
+              <Bot className="h-2.5 w-2.5" /> {t.inbox.aiReply}
             </Badge>
           )}
           {!convo.wasAiGenerated && convo.matchedRuleName && (
             <Badge variant="secondary" className="gap-0.5 bg-secondary text-[10px] px-1.5 py-0">
-              <Workflow className="h-2.5 w-2.5" /> Rule
+              <Workflow className="h-2.5 w-2.5" /> {t.inbox.ruleReply}
             </Badge>
           )}
           {convo.escalated && (
             <Badge className="gap-0.5 bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0 hover:bg-amber-100">
-              <AlertTriangle className="h-2.5 w-2.5" /> Follow-up
+              <AlertTriangle className="h-2.5 w-2.5" /> {t.inbox.followup}
             </Badge>
           )}
         </div>
@@ -276,9 +278,9 @@ function EmptyInbox() {
         <InboxIcon className="h-7 w-7 text-primary" />
       </div>
       <div className="space-y-1">
-        <h3 className="font-medium">No conversations yet</h3>
+        <h3 className="font-medium">{t.inbox.noConversations}</h3>
         <p className="text-sm text-muted-foreground max-w-xs">
-          When customers DM or comment, they&apos;ll appear here. Try the simulator in Settings to test your automation.
+          وقتی مشتریان دایرکت یا کامنت بدهند، اینجا نمایش داده می‌شوند. برای امتحان خودکارسازی، از شبیه‌ساز در تنظیمات استفاده کنید.
         </p>
       </div>
     </div>
@@ -292,51 +294,47 @@ function EmptyDetail() {
         <MessageSquare className="h-8 w-8 text-primary" />
       </div>
       <div className="space-y-1">
-        <h3 className="font-medium">Select a conversation</h3>
+        <h3 className="font-medium">{t.inbox.noConversation}</h3>
         <p className="text-sm text-muted-foreground max-w-xs">
-          Pick a conversation from the list to see the full thread and reply.
+          {t.inbox.noConversationDesc}
         </p>
       </div>
     </div>
   );
 }
 
-function MessageBubble({
-  convo,
-}: {
-  convo: ConversationDto;
-}) {
+function MessageBubble({ convo }: { convo: ConversationDto }) {
   return (
     <div className="space-y-1.5">
-      {/* inbound (customer) — left */}
+      {/* inbound (customer) — right in RTL */}
       <div className="flex justify-start">
-        <div className="max-w-[78%] rounded-2xl rounded-bl-md bg-muted px-3.5 py-2 text-sm">
+        <div className="max-w-[78%] rounded-2xl rounded-br-md bg-muted px-3.5 py-2 text-sm">
           <p className="whitespace-pre-wrap break-words">{convo.inboundMessage}</p>
-          <div className="mt-1 text-right text-[10px] text-muted-foreground">
-            {fmtDateTime(convo.createdAt)}
+          <div className="mt-1 text-start text-[10px] text-muted-foreground">
+            {faDateTime(convo.createdAt)}
           </div>
         </div>
       </div>
-      {/* outbound (bot/agent) — right */}
+      {/* outbound (bot/agent) — left in RTL */}
       {convo.outboundMessage && (
         <div className="flex justify-end">
           <div className="max-w-[78%] space-y-1">
-            <div className="rounded-2xl rounded-br-md ig-gradient px-3.5 py-2 text-sm text-white shadow-sm">
+            <div className="rounded-2xl rounded-bl-md ig-gradient px-3.5 py-2 text-sm text-white shadow-sm">
               <p className="whitespace-pre-wrap break-words">{convo.outboundMessage}</p>
-              <div className="mt-1 text-right text-[10px] text-white/70">
-                {fmtDateTime(convo.createdAt)}
+              <div className="mt-1 text-start text-[10px] text-white/70">
+                {faDateTime(convo.createdAt)}
               </div>
             </div>
             <div className="flex items-center justify-end gap-1.5">
               {convo.wasAiGenerated ? (
                 <Badge className="bg-primary/10 text-primary text-[10px] px-1.5 py-0 hover:bg-primary/10">
-                  <Sparkles className="h-2.5 w-2.5" /> AI
-                  {convo.aiModel && <span className="ml-1 opacity-70">{convo.aiModel}</span>}
+                  <Sparkles className="h-2.5 w-2.5" /> {t.inbox.aiReply}
+                  {convo.aiModel && <span className="ms-1 opacity-70" dir="ltr">{convo.aiModel}</span>}
                 </Badge>
               ) : (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                   <Workflow className="h-2.5 w-2.5" />
-                  {convo.matchedRuleName ? `Rule: ${convo.matchedRuleName}` : "Rule"}
+                  {convo.matchedRuleName ? `${t.inbox.ruleReply}: ${convo.matchedRuleName}` : t.inbox.ruleReply}
                 </Badge>
               )}
             </div>
@@ -381,7 +379,7 @@ function DetailPane({
         </div>
         <div className="flex-1 space-y-3 p-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className={cn("h-12 w-2/3", i % 2 ? "ml-auto" : "")} />
+            <Skeleton key={i} className={cn("h-12 w-2/3", i % 2 ? "ms-auto" : "")} />
           ))}
         </div>
       </div>
@@ -392,11 +390,13 @@ function DetailPane({
 
   const { Icon, label } = channelMeta(convo.channel);
   const escalated = convo.escalated || convo.status === "escalated";
+  const username = convo.contactUsername || convo.contactIgId;
+  const intentLabel = convo.intent ? INTENTS[convo.intent] || convo.intent : null;
 
   function sendReply() {
     const text = reply.trim();
     if (!text) {
-      toast.error("Type a reply first");
+      toast.error("ابتدا یک پاسخ بنویسید");
       return;
     }
     onPatch({ manualReply: text });
@@ -408,18 +408,18 @@ function DetailPane({
       {/* Header */}
       <div className="border-b p-4 space-y-3">
         {onBack && (
-          <Button variant="ghost" size="sm" className="md:hidden -ml-2 mb-1" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" /> Back
+          <Button variant="ghost" size="sm" className="md:hidden -ms-2 mb-1" onClick={onBack}>
+            <ArrowRight className="h-4 w-4" /> {t.common.back}
           </Button>
         )}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <GradientAvatar name={convo.contactUsername || convo.contactIgId} size="h-10 w-10" />
+            <GradientAvatar name={username} size="h-10 w-10" />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="truncate font-medium">@{convo.contactUsername || convo.contactIgId}</span>
+                <span dir="ltr" className="truncate font-medium">@{username}</span>
                 {convo.igUsername && (
-                  <span className="text-xs text-muted-foreground">→ @{convo.igUsername}</span>
+                  <span dir="ltr" className="text-xs text-muted-foreground">← @{convo.igUsername}</span>
                 )}
               </div>
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
@@ -429,8 +429,8 @@ function DetailPane({
                 <Badge className={cn("text-[10px]", statusBadgeClass(convo.status))}>
                   {labelFor(CONVERSATION_STATUSES, convo.status)}
                 </Badge>
-                {convo.intent && (
-                  <Badge variant="secondary" className="text-[10px] capitalize">{convo.intent}</Badge>
+                {intentLabel && (
+                  <Badge variant="secondary" className="text-[10px]">{intentLabel}</Badge>
                 )}
               </div>
             </div>
@@ -438,7 +438,7 @@ function DetailPane({
           {convo.postPermalink && (
             <Button asChild variant="ghost" size="sm" className="shrink-0">
               <a href={convo.postPermalink} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-3.5 w-3.5" /> View on IG
+                <ExternalLink className="h-3.5 w-3.5" /> {t.inbox.viewOnIg}
               </a>
             </Button>
           )}
@@ -450,12 +450,12 @@ function DetailPane({
         <div className="border-b bg-amber-50 dark:bg-amber-950/30 px-4 py-2.5 text-amber-800 dark:text-amber-200">
           <div className="flex items-center gap-2 text-sm font-medium">
             <AlertTriangle className="h-4 w-4" />
-            Needs human follow-up
+            {t.inbox.needsHuman}
           </div>
           {convo.suggestedAction && (
             <div className="mt-1 flex items-start gap-1.5 text-xs">
               <Lightbulb className="mt-0.5 h-3 w-3 shrink-0" />
-              <span>Suggested: {convo.suggestedAction}</span>
+              <span>{t.inbox.suggested} {convo.suggestedAction}</span>
             </div>
           )}
         </div>
@@ -464,9 +464,9 @@ function DetailPane({
       {/* Thread */}
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto scrollbar-thin p-4">
         {thread.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-8">No messages yet.</p>
+          <p className="text-center text-sm text-muted-foreground py-8">هنوز پیامی وجود ندارد.</p>
         ) : (
-          thread.map((t) => <MessageBubble key={t.id} convo={t} />)
+          thread.map((m) => <MessageBubble key={m.id} convo={m} />)
         )}
       </div>
 
@@ -475,9 +475,9 @@ function DetailPane({
         <Textarea
           value={reply}
           onChange={(e) => setReply(e.target.value)}
-          placeholder="Type a manual reply…"
+          placeholder={t.inbox.replyPlaceholder}
           className="min-h-[60px] resize-none"
-          aria-label="Reply message"
+          aria-label={t.inbox.replyPlaceholder}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
@@ -487,38 +487,38 @@ function DetailPane({
         />
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={sendReply} disabled={patching} className="ig-gradient text-white">
-            <Send className="h-4 w-4" /> Send reply
+            <Send className="h-4 w-4" /> {t.inbox.sendReply}
           </Button>
-          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <div className="ms-auto flex flex-wrap items-center gap-1.5">
             <Button
               variant="outline"
               size="sm"
               onClick={() => onPatch({ status: "resolved" })}
               disabled={patching}
             >
-              <CheckCheck className="h-4 w-4" /> Resolve
+              <CheckCheck className="h-4 w-4" /> {t.inbox.resolve}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => onPatch({ escalated: true, status: "escalated" })}
               disabled={patching || escalated}
-              title="Flag for follow-up"
+              title={t.inbox.followup}
             >
-              <Flag className="h-4 w-4" /> Follow-up
+              <Flag className="h-4 w-4" /> {t.inbox.followup}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onPatch({ status: "auto", escalated: false })}
               disabled={patching}
-              title="Reopen"
+              title={t.inbox.reopen}
             >
-              <RotateCcw className="h-4 w-4" /> Reopen
+              <RotateCcw className="h-4 w-4" /> {t.inbox.reopen}
             </Button>
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground">⌘/Ctrl + Enter to send</p>
+        <p className="text-[10px] text-muted-foreground">⌘/Ctrl + Enter برای ارسال</p>
       </div>
     </div>
   );
@@ -536,8 +536,8 @@ export function InboxView() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q), 300);
-    return () => clearTimeout(t);
+    const id = setTimeout(() => setDebouncedQ(q), 300);
+    return () => clearTimeout(id);
   }, [q]);
 
   const listUrl = useMemo(() => {
@@ -581,14 +581,14 @@ export function InboxView() {
       { id: selectedId, ...body },
       {
         onSuccess: (data) => {
-          if (body.manualReply) toast.success("Reply sent to Instagram");
-          else if (body.status === "resolved") toast.success("Conversation resolved");
-          else if (body.escalated) toast.success("Flagged for follow-up");
-          else if (body.status === "auto") toast.success("Conversation reopened");
-          else toast.success("Conversation updated");
+          if (body.manualReply) toast.success("پاسخ به اینستاگرام ارسال شد");
+          else if (body.status === "resolved") toast.success("گفتگو حل‌شد");
+          else if (body.escalated) toast.success("برای پیگیری علامت‌گذاری شد");
+          else if (body.status === "auto") toast.success("گفتگو بازگشایی شد");
+          else toast.success("گفتگو به‌روزرسانی شد");
           void data;
         },
-        onError: (e) => toast.error(e.message || "Update failed"),
+        onError: (e) => toast.error(e.message || "به‌روزرسانی ناموفق بود"),
       },
     );
   }
@@ -612,16 +612,16 @@ export function InboxView() {
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Inbox</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{t.inbox.title}</h1>
           <p className="text-sm text-muted-foreground">
-            {listData ? `${listData.total} conversation${listData.total === 1 ? "" : "s"}` : "Loading conversations…"}
+            {listData ? `${toFa(listData.total)} گفتگو` : t.common.loading}
           </p>
         </div>
       </div>
 
       <div className="flex h-[calc(100vh-12rem)] overflow-hidden rounded-xl border bg-card">
-        {/* List pane — desktop */}
-        <aside className="hidden md:flex md:w-[340px] md:shrink-0 md:flex-col border-r">
+        {/* List pane — desktop (appears on RIGHT in RTL) */}
+        <aside className="hidden md:flex md:w-[340px] md:shrink-0 md:flex-col border-e">
           <FiltersBar
             q={q}
             setQ={setQ}
@@ -650,7 +650,7 @@ export function InboxView() {
           </div>
         </aside>
 
-        {/* Detail pane — desktop */}
+        {/* Detail pane — desktop (appears on LEFT in RTL) */}
         <section className="hidden md:flex md:flex-1 md:flex-col">
           <DetailPane
             detail={detail}
@@ -695,7 +695,7 @@ export function InboxView() {
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
           <SheetHeader className="sr-only">
-            <SheetTitle>Conversation</SheetTitle>
+            <SheetTitle>{t.inbox.title}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-hidden">
             <DetailPane

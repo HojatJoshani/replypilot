@@ -25,6 +25,7 @@ import { api } from "@/lib/api-client";
 import { useApi, useApiMutation } from "@/hooks/use-api";
 import { useAppStore } from "@/lib/store";
 import { TONES } from "@/lib/constants";
+import { t, toFa } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { AiConfigDto } from "@/types";
 
@@ -44,6 +45,15 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const INTENT_LABELS: Record<string, string> = t.intents;
+function intentLabel(intent: string): string {
+  return INTENT_LABELS[intent] ?? intent;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -200,7 +210,7 @@ function ConnectAccountEmptyState() {
       window.location.href = url;
     } catch {
       setConnecting(false);
-      toast.error("Could not start Instagram connection");
+      toast.error("اتصال به اینستاگرام ممکن نشد");
     }
   }
   return (
@@ -209,14 +219,14 @@ function ConnectAccountEmptyState() {
         <div className="flex h-20 w-20 items-center justify-center rounded-2xl ig-gradient text-white shadow-lg">
           <Inbox className="h-9 w-9" />
         </div>
-        <h2 className="mt-6 text-xl font-semibold">Connect Instagram to train your AI</h2>
+        <h2 className="mt-6 text-xl font-semibold">برای آموزش هوش مصنوعی، اینستاگرام را متصل کنید</h2>
         <p className="mt-2 max-w-md text-sm text-muted-foreground">
-          The AI assistant is configured per Instagram account. Connect an account to provide your business context.
+          دستیار هوش مصنوعی به ازای هر حساب اینستاگرام پیکربندی می‌شود. یک حساب متصل کنید تا زمینه کسب‌وکار خود را وارد کنید.
         </p>
         <Button className="mt-6 ig-gradient text-white hover:opacity-90" onClick={connect} disabled={connecting}>
-          {connecting ? "Redirecting…" : (
+          {connecting ? "در حال هدایت…" : (
             <>
-              <Plus className="h-4 w-4" /> Connect Instagram
+              <Plus className="h-4 w-4" /> {t.dashboard.connectInstagram}
             </>
           )}
         </Button>
@@ -248,21 +258,15 @@ function AiConfigViewContent({ igAccountId }: { igAccountId: string }) {
     <div className="p-4 md:p-6 space-y-6 pb-28">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">AI Assistant</h1>
-        <p className="text-sm text-muted-foreground">
-          Train your AI on your business. This context shapes every AI-generated reply.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.ai.title}</h1>
+        <p className="text-sm text-muted-foreground">{t.ai.subtitle}</p>
       </div>
 
-      {/* Info alert */}
+      {/* Safe-note alert */}
       <Alert className="border-primary/30 bg-primary/5">
         <Info className="h-4 w-4 text-primary" />
-        <AlertTitle className="text-foreground">We build the prompt, you provide the context</AlertTitle>
-        <AlertDescription>
-          ReplyPilot builds a safe, consistent system prompt from this form — you configure your business
-          context, we handle the rest. You cannot edit the raw prompt, by design. This keeps every reply
-          on-brand and prevents prompt leakage.
-        </AlertDescription>
+        <AlertTitle className="text-foreground font-bold">{t.ai.safeNote}</AlertTitle>
+        <AlertDescription>{t.ai.safeNoteDesc}</AlertDescription>
       </Alert>
 
       {/* Body */}
@@ -271,11 +275,11 @@ function AiConfigViewContent({ igAccountId }: { igAccountId: string }) {
       ) : isError ? (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Could not load AI config</AlertTitle>
+          <AlertTitle>بارگذاری پیکربندی هوش مصنوعی ناموفق بود</AlertTitle>
           <AlertDescription>
-            {error instanceof Error ? error.message : "Something went wrong."}{" "}
+            {error instanceof Error ? error.message : "خطایی رخ داد."}{" "}
             <button className="underline underline-offset-2 font-medium" onClick={() => refetch()}>
-              Try again
+              تلاش دوباره
             </button>
           </AlertDescription>
         </Alert>
@@ -340,15 +344,15 @@ function AiConfigWorkspace({
       await save(buildSaveBody(form));
       // Mark clean instantly (the upstream refetch will also remount this component).
       setState((s) => ({ ...s, snapshot: serializeForm(s.form) }));
-      toast.success("AI assistant updated");
+      toast.success(t.ai.saved);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save AI config");
+      toast.error(e instanceof Error ? e.message : "ذخیره پیکربندی هوش مصنوعی ممکن نشد");
     }
   }
 
   function handleDiscard() {
     setState((s) => ({ ...s, form: JSON.parse(s.snapshot) as AiFormState }));
-    toast("Changes discarded");
+    toast("تغییرات صرف‌نظر شد");
   }
 
   return (
@@ -363,24 +367,24 @@ function AiConfigWorkspace({
                 <Bot className="h-4 w-4" />
               </span>
               <div>
-                <CardTitle className="text-base">Basics</CardTitle>
-                <CardDescription>Who you are and how you sound.</CardDescription>
+                <CardTitle className="text-base">{t.ai.basics}</CardTitle>
+                <CardDescription>شما چه کسی هستید و چطور صحبت می‌کنید.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="biz-name">Business name</Label>
+                <Label htmlFor="biz-name">{t.ai.businessName}</Label>
                 <Input
                   id="biz-name"
                   value={form.businessName}
                   onChange={(e) => set("businessName", e.target.value)}
-                  placeholder="Glow Skin Studio"
+                  placeholder="گلو اسکین استودیو"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="biz-tone">Tone</Label>
+                <Label htmlFor="biz-tone">{t.ai.tone}</Label>
                 <Select value={form.tone} onValueChange={(v) => set("tone", v)}>
                   <SelectTrigger id="biz-tone" className="w-full">
                     <SelectValue />
@@ -396,12 +400,12 @@ function AiConfigWorkspace({
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="biz-desc">What does your business do?</Label>
+              <Label htmlFor="biz-desc">{t.ai.description}</Label>
               <Textarea
                 id="biz-desc"
                 value={form.description}
                 onChange={(e) => set("description", e.target.value)}
-                placeholder="A skincare studio offering facials, chemical peels, and a line of cruelty-free products. We help clients build glowing, healthy skin."
+                placeholder="یک استودیوی پوستی که خدمات فیشیال، پیلینگ شیمیایی و یک خط محصول بدون cruely‌free ارائه می‌دهد. به مشتریان می‌آموزیم پوستی درخشان و سالم بسازند."
                 rows={4}
               />
             </div>
@@ -416,29 +420,29 @@ function AiConfigWorkspace({
                 <Tag className="h-4 w-4" />
               </span>
               <div>
-                <CardTitle className="text-base">Products & Services</CardTitle>
-                <CardDescription>One per line. Suggested format: Name (price).</CardDescription>
+                <CardTitle className="text-base">{t.ai.productsServices}</CardTitle>
+                <CardDescription>{t.ai.productsHelp}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="biz-products">Products</Label>
+              <Label htmlFor="biz-products">{t.ai.products}</Label>
               <Textarea
                 id="biz-products"
                 value={form.products}
                 onChange={(e) => set("products", e.target.value)}
-                placeholder={"Vitamin C Serum (450k Toman)\nHydrating Cream (380k Toman)\nSPF 50 (520k Toman)"}
+                placeholder={"سرم ویتامین سی (۴۵۰هزار تومان)\nکرم آبرسان (۳۸۰هزار تومان)\nضدآفتاب SPF 50 (۵۲۰هزار تومان)"}
                 rows={5}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="biz-services">Services</Label>
+              <Label htmlFor="biz-services">{t.ai.services}</Label>
               <Textarea
                 id="biz-services"
                 value={form.services}
                 onChange={(e) => set("services", e.target.value)}
-                placeholder={"Signature Facial (1.2m Toman)\nChemical Peel (900k Toman)\nConsultation (free)"}
+                placeholder={"فیشیال اختصاصی (۱٫۲ میلیون تومان)\nپیلینگ شیمیایی (۹۰۰هزار تومان)\nمشاوره (رایگان)"}
                 rows={5}
               />
             </div>
@@ -453,30 +457,30 @@ function AiConfigWorkspace({
                 <HelpCircle className="h-4 w-4" />
               </span>
               <div>
-                <CardTitle className="text-base">Frequently asked questions</CardTitle>
-                <CardDescription>The AI will use these to answer common questions.</CardDescription>
+                <CardTitle className="text-base">{t.ai.faqs}</CardTitle>
+                <CardDescription>هوش مصنوعی از این موارد برای پاسخ به سؤالات رایج استفاده می‌کند.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {form.faqs.length === 0 && (
-              <p className="text-sm text-muted-foreground">No FAQs yet. Add a few common questions.</p>
+              <p className="text-sm text-muted-foreground">هنوز سؤال متداولی وجود ندارد. چند سؤال رایج اضافه کنید.</p>
             )}
-            <div className="space-y-2 max-h-72 overflow-y-auto scrollbar-thin pr-1">
+            <div className="space-y-2 max-h-72 overflow-y-auto scrollbar-thin ps-1">
               {form.faqs.map((row, i) => (
                 <div key={i} className="flex flex-col gap-2 sm:flex-row sm:items-start">
                   <Input
                     value={row.q}
                     onChange={(e) => updateFaq(i, "q", e.target.value)}
-                    placeholder="Question"
-                    aria-label={`FAQ ${i + 1} question`}
+                    placeholder={t.ai.faqQuestion}
+                    aria-label={`سؤال متداول ${toFa(i + 1)}`}
                     className="sm:flex-1"
                   />
                   <Input
                     value={row.a}
                     onChange={(e) => updateFaq(i, "a", e.target.value)}
-                    placeholder="Answer"
-                    aria-label={`FAQ ${i + 1} answer`}
+                    placeholder={t.ai.faqAnswer}
+                    aria-label={`پاسخ متداول ${toFa(i + 1)}`}
                     className="sm:flex-[1.4]"
                   />
                   <Button
@@ -485,7 +489,7 @@ function AiConfigWorkspace({
                     size="icon"
                     className="text-destructive hover:text-destructive shrink-0"
                     onClick={() => removeFaq(i)}
-                    aria-label={`Remove FAQ ${i + 1}`}
+                    aria-label={`${t.ai.removeFaq} ${toFa(i + 1)}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -493,7 +497,7 @@ function AiConfigWorkspace({
               ))}
             </div>
             <Button type="button" variant="outline" size="sm" onClick={addFaq}>
-              <Plus className="h-4 w-4" /> Add FAQ
+              <Plus className="h-4 w-4" /> {t.ai.addFaq}
             </Button>
           </CardContent>
         </Card>
@@ -506,17 +510,17 @@ function AiConfigWorkspace({
                 <ShoppingCart className="h-4 w-4" />
               </span>
               <div>
-                <CardTitle className="text-base">Pricing & Checkout</CardTitle>
-                <CardDescription>Control how the AI talks about prices.</CardDescription>
+                <CardTitle className="text-base">{t.ai.pricingCheckout}</CardTitle>
+                <CardDescription>کنترل کنید هوش مصنوعی چطور درباره قیمت صحبت کند.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
-                <Label htmlFor="pricing-visible" className="cursor-pointer">Show prices to customers</Label>
+                <Label htmlFor="pricing-visible" className="cursor-pointer">{t.ai.pricingVisible}</Label>
                 <p className="text-xs text-muted-foreground">
-                  When off, the AI will ask customers to DM for pricing.
+                  وقتی خاموش باشد، هوش مصنوعی از مشتری می‌خواهد برای قیمت دایرکت بدهد.
                 </p>
               </div>
               <Switch
@@ -527,25 +531,26 @@ function AiConfigWorkspace({
             </div>
             {form.pricingVisible && (
               <div className="space-y-1.5">
-                <Label htmlFor="pricing-note">Pricing note</Label>
+                <Label htmlFor="pricing-note">{t.ai.pricingNote}</Label>
                 <Input
                   id="pricing-note"
                   value={form.pricingNote}
                   onChange={(e) => set("pricingNote", e.target.value)}
-                  placeholder="Prices in Toman"
+                  placeholder="قیمت‌ها به تومان"
                 />
               </div>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="purchase-link">Purchase / booking link</Label>
+              <Label htmlFor="purchase-link">{t.ai.purchaseLink}</Label>
               <Input
                 id="purchase-link"
                 value={form.purchaseLink}
                 onChange={(e) => set("purchaseLink", e.target.value)}
                 placeholder="https://glowstudio.com/order"
+                dir="ltr"
               />
               <p className="text-xs text-muted-foreground">
-                The AI can share this when a customer is ready to buy or book.
+                هوش مصنوعی می‌تواند این لینک را وقتی مشتری آماده خرید یا رزرو است به اشتراک بگذارد.
               </p>
             </div>
           </CardContent>
@@ -559,21 +564,21 @@ function AiConfigWorkspace({
                 <Clock className="h-4 w-4" />
               </span>
               <div>
-                <CardTitle className="text-base">Availability</CardTitle>
-                <CardDescription>When you're open and reachable.</CardDescription>
+                <CardTitle className="text-base">{t.ai.availability}</CardTitle>
+                <CardDescription>چه ساعاتی باز هستید و در دسترس.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-1.5">
-            <Label htmlFor="working-hours">Working hours</Label>
+            <Label htmlFor="working-hours">{t.ai.workingHours}</Label>
             <Input
               id="working-hours"
               value={form.workingHours}
               onChange={(e) => set("workingHours", e.target.value)}
-              placeholder="Sat–Thu 10:00–20:00 (closed Fridays)"
+              placeholder={t.ai.workingHoursPlaceholder}
             />
             <p className="text-xs text-muted-foreground">
-              The AI will mention these when customers ask about timing.
+              هوش مصنوعی هنگام پرسیدن سؤال درباره زمان، این موارد را ذکر می‌کند.
             </p>
           </CardContent>
         </Card>
@@ -586,27 +591,27 @@ function AiConfigWorkspace({
                 <Settings2 className="h-4 w-4" />
               </span>
               <div>
-                <CardTitle className="text-base">Special rules & guardrails</CardTitle>
-                <CardDescription>Hard limits the AI must respect.</CardDescription>
+                <CardTitle className="text-base">{t.ai.specialRules}</CardTitle>
+                <CardDescription>محدودیت‌های سخت‌گیرانه‌ای که هوش مصنوعی باید رعایت کند.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="special-rules">Special rules</Label>
+              <Label htmlFor="special-rules">{t.ai.specialRules}</Label>
               <Textarea
                 id="special-rules"
                 value={form.specialRules}
                 onChange={(e) => set("specialRules", e.target.value)}
-                placeholder={"e.g. Escalate medical questions. Never offer discounts beyond 10%. Always confirm booking by phone."}
+                placeholder={t.ai.specialRulesPlaceholder}
                 rows={4}
               />
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
-                <Label htmlFor="ai-fallback" className="cursor-pointer">Let AI handle unmatched messages</Label>
+                <Label htmlFor="ai-fallback" className="cursor-pointer">{t.ai.aiFallback}</Label>
                 <p className="text-xs text-muted-foreground">
-                  When no automation rule matches, the AI will craft a reply using this context.
+                  وقتی هیچ قانون خودکارسازی تطابق نداشته باشد، هوش مصنوعی با استفاده از این زمینه پاسخ می‌سازد.
                 </p>
               </div>
               <Switch
@@ -624,14 +629,14 @@ function AiConfigWorkspace({
         <LivePreview igAccountId={igAccountId} aiFallbackEnabled={form.aiFallbackEnabled} />
       </div>
 
-      {/* Sticky save bar */}
+      {/* Sticky save bar — appears only when dirty. Mobile: centered; desktop: bottom-start (right in RTL). */}
       {isDirty && (
-        <div className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
+        <div className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2 sm:left-6 sm:translate-x-0">
           <div className="flex items-center gap-3 rounded-full border bg-background/95 px-4 py-2 shadow-lg backdrop-blur">
-            <span className="hidden sm:inline text-sm text-muted-foreground">Unsaved changes</span>
-            <span className="sm:hidden text-sm text-muted-foreground">Unsaved</span>
+            <span className="hidden sm:inline text-sm text-muted-foreground">تغییرات ذخیره نشده</span>
+            <span className="sm:hidden text-sm text-muted-foreground">ذخیره نشده</span>
             <Button variant="ghost" size="sm" onClick={handleDiscard} disabled={saving}>
-              <RotateCcw className="h-3.5 w-3.5" /> Discard
+              <RotateCcw className="h-3.5 w-3.5" /> {t.ai.discard}
             </Button>
             <Button size="sm" onClick={handleSave} disabled={saving} className="ig-gradient text-white hover:opacity-90">
               {saving ? (
@@ -639,7 +644,7 @@ function AiConfigWorkspace({
               ) : (
                 <Save className="h-3.5 w-3.5" />
               )}
-              Save changes
+              {saving ? t.ai.saving : t.ai.save}
             </Button>
           </div>
         </div>
@@ -653,9 +658,9 @@ function AiConfigWorkspace({
 // ---------------------------------------------------------------------------
 
 const SAMPLE_MESSAGES = [
-  "Hi, how much is the Vitamin C Serum?",
-  "Do you ship to Tehran?",
-  "What are your working hours?",
+  "سلام، سرم ویتامین سی چند است؟",
+  "به تهران ارسال دارید؟",
+  "ساعات کاری شما چیست؟",
 ];
 
 function LivePreview({
@@ -683,7 +688,7 @@ function LivePreview({
       });
       setResult(res);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Preview failed");
+      toast.error(e instanceof Error ? e.message : "پیش‌نمایش ناموفق بود");
     } finally {
       setLoading(false);
     }
@@ -697,8 +702,8 @@ function LivePreview({
             <Sparkles className="h-4 w-4" />
           </span>
           <div>
-            <CardTitle className="text-base">Live preview</CardTitle>
-            <CardDescription>See how your context shapes replies.</CardDescription>
+            <CardTitle className="text-base">{t.ai.preview}</CardTitle>
+            <CardDescription>{t.ai.previewDesc}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -729,15 +734,15 @@ function LivePreview({
                 run();
               }
             }}
-            placeholder="Simulate a customer message…"
-            aria-label="Simulate a customer message"
+            placeholder={t.ai.testMessage}
+            aria-label={t.ai.testMessage}
           />
           <Button
             size="icon"
             onClick={() => run()}
             disabled={loading || !message.trim()}
             className="ig-gradient text-white hover:opacity-90 shrink-0"
-            aria-label="Send test message"
+            aria-label={t.ai.send}
           >
             {loading ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/70 border-t-transparent" />
@@ -775,8 +780,9 @@ function PreviewChat({
   }
   if (!result) {
     return (
-      <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-center text-sm text-muted-foreground">
-        Send a message to preview how your AI assistant will reply.
+      <div className="space-y-2 rounded-lg border border-dashed bg-muted/20 p-4 text-center text-sm text-muted-foreground">
+        <p>یک پیام ارسال کنید تا ببینید دستیار هوش مصنوعی چطور پاسخ می‌دهد.</p>
+        <p className="text-xs">{t.ai.whenNoMatch}</p>
       </div>
     );
   }
@@ -790,11 +796,11 @@ function PreviewChat({
       {matched ? (
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <Badge variant="secondary" className="gap-1">
-            <MessageSquare className="h-3 w-3" /> Rule: {matched.name}
+            <MessageSquare className="h-3 w-3" /> قانون: {matched.name}
           </Badge>
           {matched.responseType === "ai_generated" && (
             <Badge className="gap-1 ig-gradient text-white border-transparent text-[10px]">
-              <Sparkles className="h-3 w-3" /> AI
+              <Sparkles className="h-3 w-3" /> هوش مصنوعی
             </Badge>
           )}
         </div>
@@ -802,60 +808,54 @@ function PreviewChat({
         <div className="flex items-center gap-1.5 text-xs">
           {result.aiFallback || aiFallbackEnabled ? (
             <Badge className="gap-1 ig-gradient text-white border-transparent">
-              <Bot className="h-3 w-3" /> AI fallback
+              <Bot className="h-3 w-3" /> پشتیبان هوش مصنوعی
             </Badge>
           ) : (
-            <Badge variant="secondary">No rule · fallback off</Badge>
+            <Badge variant="secondary">بدون قانون · پشتیبان خاموش</Badge>
           )}
         </div>
       )}
 
-      {/* Chat bubbles */}
-      <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-secondary px-3 py-2 text-sm">
-          {message || "Customer message"}
+      {/* Chat bubbles — customer on the right (self-start), AI on the left (self-end) in RTL */}
+      <div className="flex flex-col gap-2">
+        <div className="self-start max-w-[85%] rounded-2xl rounded-es-sm bg-secondary px-3 py-2 text-sm">
+          {message || t.inbox.customer}
         </div>
-      </div>
-      {ai ? (
-        <div className="space-y-1.5">
-          <div className="flex justify-start">
-            <div className="max-w-[90%] rounded-2xl rounded-bl-sm ig-gradient px-3 py-2 text-sm text-white whitespace-pre-wrap">
+        {ai ? (
+          <div className="self-end max-w-[90%] space-y-1.5">
+            <div className="rounded-2xl rounded-ee-sm ig-gradient px-3 py-2 text-sm text-white whitespace-pre-wrap">
               {ai.reply}
             </div>
+            <div className="flex flex-wrap items-center gap-1.5 ps-1">
+              <Badge variant="secondary" className="text-[10px]">{intentLabel(ai.intent)}</Badge>
+              {ai.escalate ? (
+                <Badge className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-300 border-transparent">
+                  {t.rules.escalate}
+                </Badge>
+              ) : (
+                <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-transparent">
+                  پاسخ خودکار
+                </Badge>
+              )}
+              {ai.suggestedAction && (
+                <span className="text-[10px] text-muted-foreground">
+                  ← {ai.suggestedAction}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5 pl-1">
-            <Badge variant="secondary" className="text-[10px]">{ai.intent}</Badge>
-            {ai.escalate ? (
-              <Badge className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-300 border-transparent">
-                Escalate
-              </Badge>
-            ) : (
-              <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-transparent">
-                Auto-reply
-              </Badge>
-            )}
-            {ai.suggestedAction && (
-              <span className="text-[10px] text-muted-foreground">
-                → {ai.suggestedAction}
-              </span>
-            )}
+        ) : matched ? (
+          <div className="self-end max-w-[90%] rounded-2xl rounded-ee-sm bg-muted px-3 py-2 text-sm text-muted-foreground italic">
+            این قانون از پاسخ ثابت استفاده می‌کند — بدون تولید هوش مصنوعی.
           </div>
-        </div>
-      ) : matched ? (
-        <div className="flex justify-start">
-          <div className="max-w-[90%] rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-sm text-muted-foreground italic">
-            This rule uses a static reply — no AI generation.
-          </div>
-        </div>
-      ) : (
-        <div className="flex justify-start">
-          <div className="max-w-[90%] rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-sm text-muted-foreground italic">
+        ) : (
+          <div className="self-end max-w-[90%] rounded-2xl rounded-ee-sm bg-muted px-3 py-2 text-sm text-muted-foreground italic">
             {aiFallbackEnabled
-              ? "The AI is thinking… try again in a moment."
-              : "Enable AI fallback above to generate a reply."}
+              ? "هوش مصنوعی در حال فکر کردن است… کمی بعد دوباره امتحان کنید."
+              : "برای تولید پاسخ، پشتیبان هوش مصنوعی را در بالا فعال کنید."}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

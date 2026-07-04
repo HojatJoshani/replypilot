@@ -4,8 +4,9 @@ import { useAppStore } from "@/lib/store";
 import { useApi, useApiMutation } from "@/hooks/use-api";
 import { api } from "@/lib/api-client";
 import type { Plan, SubscriptionDto } from "@/types";
-import { PLANS, labelFor } from "@/lib/constants";
-import { fmtDate } from "@/lib/format";
+import { PLANS } from "@/lib/constants";
+import { faDate } from "@/lib/format";
+import { t, toFa, faNumber } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -32,13 +33,20 @@ const PLAN_ICONS: Record<Plan, typeof Crown> = {
   business: Building2,
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  active: "فعال",
+  trialing: "دوره آزمایشی",
+  canceled: "لغوشده",
+  expired: "منقضی",
+};
+
 function ConnectAccountCta() {
   async function connect() {
     try {
       const { url } = await api.get<{ url: string }>("/api/instagram/oauth/start");
       window.location.href = url;
     } catch {
-      toast.error("Could not start Instagram connection");
+      toast.error("شروع اتصال به اینستاگرام ناموفق بود");
     }
   }
   return (
@@ -47,12 +55,12 @@ function ConnectAccountCta() {
         <CreditCard className="h-10 w-10 text-primary" />
       </div>
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Connect an Instagram account</h3>
+        <h3 className="text-lg font-semibold">یک حساب اینستاگرام متصل کنید</h3>
         <p className="text-sm text-muted-foreground max-w-sm">
-          Connect an account to start using ReplyPilot and manage your subscription.
+          برای استفاده از ریپلای‌پایلوت و مدیریت اشتراک، یک حساب متصل کنید.
         </p>
       </div>
-      <Button onClick={connect} className="ig-gradient text-white">Connect Instagram</Button>
+      <Button onClick={connect} className="ig-gradient text-white">{t.settings.connectInstagram}</Button>
     </div>
   );
 }
@@ -86,14 +94,16 @@ function CurrentPlanCard({
   const pct = aiRepliesLimit > 0 ? Math.min(100, Math.round((aiRepliesUsed / aiRepliesLimit) * 100)) : 0;
   const approachingLimit = plan === "free" && pct >= 80;
   const isUnlimited = aiRepliesLimit >= 999999;
+  const statusKey = subscription?.status || "active";
+  const statusLabel = STATUS_LABELS[statusKey] || statusKey;
 
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <CardTitle className="text-base">Current plan</CardTitle>
-            <CardDescription>Your subscription and usage this billing period.</CardDescription>
+            <CardTitle className="text-base">{t.billing.currentPlan}</CardTitle>
+            <CardDescription>{t.billing.currentPlanDesc}</CardDescription>
           </div>
           <Badge
             className={cn(
@@ -101,35 +111,35 @@ function CurrentPlanCard({
               subscription?.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground",
             )}
           >
-            {subscription?.status ? subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1) : "Active"}
+            {statusLabel}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <div className="text-xs text-muted-foreground">Plan</div>
+            <div className="text-xs text-muted-foreground">{t.billing.plan}</div>
             <div className="text-2xl font-semibold tracking-tight">{planDef.label}</div>
           </div>
           <div className="text-sm text-muted-foreground">
-            ${planDef.price}/mo
+            <span dir="ltr">${toFa(planDef.price)}</span> {t.billing.perMonth}
           </div>
           {subscription?.cancelAtPeriodEnd && (
             <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-xs">
-              <Ban className="h-3 w-3" /> Cancels at period end
+              <Ban className="h-3 w-3" /> در پایان دوره لغو می‌شود
             </Badge>
           )}
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <div className="text-xs text-muted-foreground">Seats</div>
-            <div className="font-medium">{subscription?.seats ?? planDef.limits.accounts} account{(subscription?.seats ?? planDef.limits.accounts) === 1 ? "" : "s"}</div>
+            <div className="text-xs text-muted-foreground">{t.billing.seats}</div>
+            <div className="font-medium">{faNumber(subscription?.seats ?? planDef.limits.accounts)} حساب</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">Current period ends</div>
+            <div className="text-xs text-muted-foreground">{t.billing.periodEnds}</div>
             <div className="font-medium">
-              {subscription?.currentPeriodEnd ? fmtDate(subscription.currentPeriodEnd) : "—"}
+              {subscription?.currentPeriodEnd ? faDate(subscription.currentPeriodEnd) : "—"}
             </div>
           </div>
         </div>
@@ -138,30 +148,30 @@ function CurrentPlanCard({
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-1.5 font-medium">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
-              AI replies this period
+              {t.billing.aiRepliesPeriod}
             </span>
             <span className="text-muted-foreground">
-              {aiRepliesUsed.toLocaleString()}{" "}
-              / {isUnlimited ? "∞" : aiRepliesLimit.toLocaleString()}
+              {faNumber(aiRepliesUsed)}{" / "}
+              {isUnlimited ? "∞" : faNumber(aiRepliesLimit)}
             </span>
           </div>
           <Progress value={isUnlimited ? 5 : pct} className="h-2" />
           {!isUnlimited && (
             <p className="text-[11px] text-muted-foreground">
-              {pct < 100 ? `${100 - pct}% remaining` : "Limit reached — upgrade to keep using AI replies"}
+              {pct < 100 ? `${toFa(100 - pct)}٪ باقی‌مانده` : "به محدودیت رسیدید — برای ادامه پاسخ‌های هوش مصنوعی، طرح را ارتقا دهید"}
             </p>
           )}
           {isUnlimited && (
-            <p className="text-[11px] text-muted-foreground">Unlimited AI replies on your plan.</p>
+            <p className="text-[11px] text-muted-foreground">در طرح شما پاسخ‌های هوش مصنوعی نامحدود است.</p>
           )}
         </div>
 
         {approachingLimit && (
           <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800">
             <TrendingUp className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-800 dark:text-amber-200">Approaching your AI reply limit</AlertTitle>
+            <AlertTitle className="text-amber-800 dark:text-amber-200">{t.billing.upgradeSuggest}</AlertTitle>
             <AlertDescription className="text-amber-700 dark:text-amber-300">
-              You&apos;ve used {pct}% of your monthly AI replies. Upgrade to Growth for 2,000 replies/mo.
+              شما از {toFa(pct)}٪ پاسخ‌های هوش مصنوعی ماهانه خود استفاده کرده‌اید. برای ۲۰۰۰ پاسخ در ماه، به طرح رشد ارتقا دهید.
             </AlertDescription>
           </Alert>
         )}
@@ -183,6 +193,7 @@ function PlanCard({
 }) {
   const Icon = PLAN_ICONS[plan.value as Plan];
   const popular = "popular" in plan && plan.popular === true;
+  const isUnlimited = plan.limits.aiReplies >= 999999;
   return (
     <Card
       className={cn(
@@ -191,9 +202,9 @@ function PlanCard({
       )}
     >
       {popular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <Badge className="ig-gradient text-white text-[10px] uppercase tracking-wide px-3 py-1 shadow-sm">
-            Most popular
+        <div className="absolute -top-3 start-1/2 -translate-x-1/2">
+          <Badge className="ig-gradient text-white text-[10px] tracking-wide px-3 py-1 shadow-sm">
+            {t.billing.popular}
           </Badge>
         </div>
       )}
@@ -206,8 +217,8 @@ function PlanCard({
         </div>
         <CardDescription>{plan.tagline}</CardDescription>
         <div className="flex items-baseline gap-1 pt-1">
-          <span className="text-3xl font-bold tracking-tight">${plan.price}</span>
-          <span className="text-sm text-muted-foreground">/mo</span>
+          <span dir="ltr" className="text-3xl font-bold tracking-tight">${toFa(plan.price)}</span>
+          <span className="text-sm text-muted-foreground">{t.billing.perMonth}</span>
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-4">
@@ -221,21 +232,21 @@ function PlanCard({
         </ul>
         <div className="rounded-md bg-muted/50 p-2.5 text-[11px] text-muted-foreground">
           <div className="flex justify-between">
-            <span>Accounts</span>
+            <span>تعداد حساب‌ها</span>
             <span className="font-medium text-foreground">
-              {plan.limits.accounts >= 10 ? "Up to 10" : plan.limits.accounts}
+              {plan.limits.accounts >= 10 ? `تا ${toFa(plan.limits.accounts)}` : toFa(plan.limits.accounts)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span>AI replies/mo</span>
+            <span>پاسخ هوش مصنوعی/ماه</span>
             <span className="font-medium text-foreground">
-              {plan.limits.aiReplies >= 999999 ? "Unlimited" : plan.limits.aiReplies.toLocaleString()}
+              {isUnlimited ? "نامحدود" : faNumber(plan.limits.aiReplies)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span>Automation rules</span>
+            <span>قوانین خودکارسازی</span>
             <span className="font-medium text-foreground">
-              {plan.limits.rules >= 999 ? "Unlimited" : plan.limits.rules}
+              {plan.limits.rules >= 999 ? "نامحدود" : toFa(plan.limits.rules)}
             </span>
           </div>
         </div>
@@ -243,7 +254,7 @@ function PlanCard({
       <CardContent className="pt-0">
         {isCurrent ? (
           <Button variant="outline" className="w-full" disabled>
-            <Check className="h-4 w-4" /> Current plan
+            <Check className="h-4 w-4" /> {t.billing.currentPlanBadge}
           </Button>
         ) : (
           <Button
@@ -251,7 +262,7 @@ function PlanCard({
             disabled={loading}
             className={cn("w-full", popular ? "ig-gradient text-white" : "")}
           >
-            {loading ? "Switching…" : `Switch to ${plan.label}`}
+            {loading ? t.common.sending : `${t.billing.switchTo} ${plan.label}`}
           </Button>
         )}
       </CardContent>
@@ -285,15 +296,15 @@ export function BillingView() {
 
   function switchPlan(plan: Plan) {
     changeMut.mutate({ plan }, {
-      onSuccess: () => toast.success(`Plan updated to ${labelFor(PLANS, plan)}`),
-      onError: (e) => toast.error(e.message || "Failed to change plan"),
+      onSuccess: () => toast.success(t.billing.updated),
+      onError: (e) => toast.error(e.message || "تغییر طرح ناموفق بود"),
     });
   }
 
   function cancel() {
     cancelMut.mutate(undefined as unknown as void, {
-      onSuccess: () => toast.success("Subscription will cancel at period end"),
-      onError: (e) => toast.error(e.message || "Failed to cancel"),
+      onSuccess: () => toast.success(t.billing.canceled),
+      onError: (e) => toast.error(e.message || "لغو اشتراک ناموفق بود"),
     });
   }
 
@@ -312,19 +323,15 @@ export function BillingView() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Billing &amp; Plan</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your ReplyPilot subscription, usage, and billing period.
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight">{t.billing.title}</h1>
+        <p className="text-sm text-muted-foreground">{t.billing.subtitle}</p>
       </div>
 
       {/* Demo payment note */}
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertTitle>Demo mode</AlertTitle>
-        <AlertDescription>
-          No real payment is processed. Swap in Stripe or a local gateway in production to handle subscriptions.
-        </AlertDescription>
+        <AlertTitle>{t.common.demoMode}</AlertTitle>
+        <AlertDescription>{t.billing.demoNote}</AlertDescription>
       </Alert>
 
       {/* Current plan + usage */}
@@ -342,7 +349,7 @@ export function BillingView() {
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <Crown className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-semibold">Available plans</h2>
+          <h2 className="text-base font-semibold">{t.billing.availablePlans}</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-3 pt-2">
           {(billing?.plans || PLANS).map((plan) => (
@@ -360,10 +367,8 @@ export function BillingView() {
       {/* Cancel */}
       <div className="flex items-center justify-between rounded-xl border border-dashed p-4">
         <div>
-          <div className="text-sm font-medium">Cancel subscription</div>
-          <p className="text-xs text-muted-foreground">
-            Cancel anytime — your plan stays active until the end of the current period.
-          </p>
+          <div className="text-sm font-medium">{t.billing.cancel}</div>
+          <p className="text-xs text-muted-foreground">{t.billing.cancelDesc}</p>
         </div>
         <Button
           variant="ghost"
@@ -372,7 +377,7 @@ export function BillingView() {
           disabled={cancelMut.isPending || currentPlan === "free" || billing?.subscription?.cancelAtPeriodEnd}
         >
           <Ban className="h-4 w-4" />
-          {billing?.subscription?.cancelAtPeriodEnd ? "Already cancelling" : "Cancel subscription"}
+          {billing?.subscription?.cancelAtPeriodEnd ? "در حال لغو" : t.billing.cancel}
         </Button>
       </div>
     </div>

@@ -39,12 +39,38 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApi } from "@/hooks/use-api";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api-client";
-import { compactNumber } from "@/lib/format";
-import { CHANNELS } from "@/lib/constants";
+import { t, faNumber, faCompact, toFa } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { format, parseISO } from "date-fns";
 import type { AnalyticsDto } from "@/types";
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+const CH_LIST = [
+  { value: "dm", label: t.channels.dm },
+  { value: "comment", label: t.channels.comment },
+  { value: "story", label: t.channels.story },
+] as const;
+
+function intentLabel(intent: string): string {
+  const map = t.intents as Record<string, string>;
+  return map[intent] || intent;
+}
+
+const jalaliDayFmt = new Intl.DateTimeFormat("fa-IR", {
+  month: "short",
+  day: "numeric",
+});
+
+function fmtDay(d: string): string {
+  try {
+    return jalaliDayFmt.format(new Date(d));
+  } catch {
+    return d;
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Empty state — no Instagram account connected                       */
@@ -60,7 +86,7 @@ function NoAccountEmptyState() {
       );
       window.location.href = url;
     } catch {
-      toast.error("Could not start Instagram connection. Please try again.");
+      toast.error("اتصال اینستاگرام آغاز نشد. دوباره امتحان کنید.");
       setConnecting(false);
     }
   }
@@ -70,17 +96,17 @@ function NoAccountEmptyState() {
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ig-gradient text-white">
           <BarChart3 className="h-7 w-7" />
         </div>
-        <h2 className="text-xl font-bold">No analytics yet</h2>
+        <h2 className="text-xl font-bold">هنوز تحلیلی موجود نیست</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Connect an Instagram account to start collecting conversation data
-          and see rich analytics here.
+          برای جمع‌آوری داده‌های گفتگو و مشاهده تحلیل‌های غنی، یک حساب
+          اینستاگرام متصل کنید.
         </p>
         <Button
           onClick={connect}
           disabled={connecting}
           className="ig-gradient mt-5 text-white hover:opacity-95"
         >
-          Connect Instagram
+          {t.dashboard.connectInstagram}
         </Button>
       </div>
     </div>
@@ -96,7 +122,6 @@ interface StatCardProps {
   value: string | number;
   icon: React.ComponentType<{ className?: string }>;
   accent?: "rose" | "amber" | "emerald" | "violet" | "sky" | "primary";
-  hint?: string;
   loading?: boolean;
 }
 
@@ -117,7 +142,6 @@ function StatCard({
   value,
   icon: Icon,
   accent = "primary",
-  hint,
   loading,
 }: StatCardProps) {
   const s = ACCENT_STYLES[accent];
@@ -126,19 +150,17 @@ function StatCard({
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="text-[11px] font-medium tracking-wide text-muted-foreground">
               {label}
             </div>
             {loading ? (
               <Skeleton className="mt-2 h-7 w-16" />
             ) : (
-              <div className="mt-1 truncate text-2xl font-bold tracking-tight">
+              <div
+                dir="ltr"
+                className="mt-1 truncate text-2xl font-bold tracking-tight"
+              >
                 {value}
-              </div>
-            )}
-            {hint && !loading && (
-              <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                {hint}
               </div>
             )}
           </div>
@@ -170,18 +192,6 @@ const TOOLTIP_STYLE: React.CSSProperties = {
 };
 
 const TICK_STYLE = { fontSize: 11, fill: "var(--muted-foreground)" };
-
-/* ------------------------------------------------------------------ */
-/* Date format helper                                                 */
-/* ------------------------------------------------------------------ */
-
-function fmtDay(d: string): string {
-  try {
-    return format(parseISO(d), "MMM d");
-  } catch {
-    return d;
-  }
-}
 
 /* ------------------------------------------------------------------ */
 /* Charts                                                             */
@@ -218,6 +228,7 @@ function VolumeAreaChart({
         <YAxis
           allowDecimals={false}
           tick={TICK_STYLE}
+          tickFormatter={(v: number) => toFa(Number(v))}
           axisLine={false}
           tickLine={false}
           width={36}
@@ -227,8 +238,13 @@ function VolumeAreaChart({
           labelStyle={{ fontWeight: 600, marginBottom: 4 }}
           labelFormatter={(l) => fmtDay(String(l))}
           formatter={(value: number, name) => {
-            const label = name === "total" ? "Total" : name === "ai" ? "AI replies" : String(name);
-            return [compactNumber(Number(value)), label];
+            const label =
+              name === "total"
+                ? "مجموع پاسخ‌ها"
+                : name === "ai"
+                  ? "پاسخ‌های هوش مصنوعی"
+                  : String(name);
+            return [faNumber(Number(value)), label];
           }}
         />
         <Area
@@ -255,8 +271,8 @@ function VolumeAreaChart({
 function AiVsRuleDonut({ ai, rule }: { ai: number; rule: number }) {
   const total = ai + rule;
   const data = [
-    { name: "AI replies", value: ai, color: "var(--chart-1)" },
-    { name: "Rule replies", value: rule, color: "var(--chart-3)" },
+    { name: "هوش مصنوعی", value: ai, color: "var(--chart-1)" },
+    { name: "قانون", value: rule, color: "var(--chart-3)" },
   ];
   return (
     <div className="relative">
@@ -264,7 +280,7 @@ function AiVsRuleDonut({ ai, rule }: { ai: number; rule: number }) {
         <PieChart>
           <Tooltip
             contentStyle={TOOLTIP_STYLE}
-            formatter={(v: number, n) => [compactNumber(Number(v)), String(n)]}
+            formatter={(v: number, n) => [faNumber(Number(v)), String(n)]}
           />
           <Pie
             data={data}
@@ -282,10 +298,13 @@ function AiVsRuleDonut({ ai, rule }: { ai: number; rule: number }) {
         </PieChart>
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold tracking-tight">
-          {compactNumber(total)}
+        <span
+          dir="ltr"
+          className="text-2xl font-bold tracking-tight"
+        >
+          {faNumber(total)}
         </span>
-        <span className="text-[11px] text-muted-foreground">total replies</span>
+        <span className="text-[11px] text-muted-foreground">مجموع پاسخ‌ها</span>
       </div>
     </div>
   );
@@ -304,7 +323,7 @@ function ChannelBreakdown({
   const total = data.reduce((a, b) => a + b.count, 0);
   return (
     <ul className="space-y-3">
-      {CHANNELS.map((c) => {
+      {CH_LIST.map((c) => {
         const entry = data.find((d) => d.channel === c.value);
         const count = entry?.count ?? 0;
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
@@ -313,8 +332,8 @@ function ChannelBreakdown({
           <li key={c.value} className="space-y-1.5">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium">{c.label}</span>
-              <span className="text-muted-foreground">
-                {compactNumber(count)} · {pct}%
+              <span className="text-muted-foreground" dir="ltr">
+                {faNumber(count)} · {toFa(pct)}٪
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -328,7 +347,7 @@ function ChannelBreakdown({
       })}
       {total === 0 && (
         <li className="rounded-md border border-dashed py-6 text-center text-xs text-muted-foreground">
-          No channel data in this period.
+          در این دوره داده‌ای برای کانال‌ها وجود ندارد.
         </li>
       )}
     </ul>
@@ -341,12 +360,10 @@ function ChannelBreakdown({
 
 function BarList({
   items,
-  emptyText = "Nothing here yet.",
-  capitalize = false,
+  emptyText = "هنوز چیزی اینجا نیست.",
 }: {
   items: { label: string; count: number }[];
   emptyText?: string;
-  capitalize?: boolean;
 }) {
   const max = Math.max(1, ...items.map((i) => i.count));
   if (items.length === 0) {
@@ -361,11 +378,9 @@ function BarList({
       {items.map((it) => (
         <li key={it.label} className="space-y-1">
           <div className="flex items-center justify-between text-sm">
-            <span className="truncate font-medium">
-              {capitalize ? it.label.charAt(0).toUpperCase() + it.label.slice(1) : it.label}
-            </span>
-            <span className="ml-2 shrink-0 text-muted-foreground">
-              {compactNumber(it.count)}
+            <span className="truncate font-medium">{it.label}</span>
+            <span className="ms-2 shrink-0 text-muted-foreground" dir="ltr">
+              {faNumber(it.count)}
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -385,9 +400,9 @@ function BarList({
 /* ------------------------------------------------------------------ */
 
 const RANGES = [
-  { value: "7", label: "7 days" },
-  { value: "30", label: "30 days" },
-  { value: "90", label: "90 days" },
+  { value: "7", label: t.analytics.days7 },
+  { value: "30", label: t.analytics.days30 },
+  { value: "90", label: t.analytics.days90 },
 ] as const;
 
 export function AnalyticsView() {
@@ -401,14 +416,18 @@ export function AnalyticsView() {
   );
 
   const topIntents = useMemo(
-    () => (data?.topIntents ?? []).map((t) => ({ label: t.intent, count: t.count })),
+    () =>
+      (data?.topIntents ?? []).map((it) => ({
+        label: intentLabel(it.intent),
+        count: it.count,
+      })),
     [data?.topIntents],
   );
   const topKeywords = useMemo(
     () =>
-      (data?.topKeywords ?? []).map((t) => ({
-        label: t.keyword,
-        count: t.count,
+      (data?.topKeywords ?? []).map((it) => ({
+        label: it.keyword,
+        count: it.count,
       })),
     [data?.topKeywords],
   );
@@ -425,12 +444,9 @@ export function AnalyticsView() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Analytics
+            {t.analytics.title}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Track reply performance, channel mix, intents and escalations over
-            time.
-          </p>
+          <p className="text-sm text-muted-foreground">{t.analytics.subtitle}</p>
         </div>
         <Tabs value={days} onValueChange={setDays}>
           <TabsList>
@@ -448,10 +464,10 @@ export function AnalyticsView() {
           <CardContent className="flex items-center justify-between gap-3 p-4">
             <div className="flex items-center gap-2 text-sm text-destructive">
               <AlertTriangle className="h-4 w-4" />
-              Couldn&apos;t load analytics.
+              بارگذاری تحلیل‌ها ناموفق بود.
             </div>
             <Button size="sm" variant="outline" onClick={() => refetch()}>
-              Retry
+              تلاش مجدد
             </Button>
           </CardContent>
         </Card>
@@ -459,40 +475,40 @@ export function AnalyticsView() {
 
       {/* KPI row */}
       <section
-        aria-label="Analytics summary"
+        aria-label="خلاصه تحلیلی"
         className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
       >
         <StatCard
-          label="Total conversations"
-          value={data ? compactNumber(data.totalConversations) : 0}
+          label={t.analytics.totalConv}
+          value={data ? faCompact(data.totalConversations) : toFa(0)}
           icon={MessagesSquare}
           accent="primary"
           loading={isLoading}
         />
         <StatCard
-          label="AI replies"
-          value={data ? compactNumber(data.aiReplies) : 0}
+          label={t.analytics.aiReplies}
+          value={data ? faCompact(data.aiReplies) : toFa(0)}
           icon={Sparkles}
           accent="rose"
           loading={isLoading}
         />
         <StatCard
-          label="Rule-based replies"
-          value={data ? compactNumber(data.ruleReplies) : 0}
+          label={t.analytics.ruleReplies}
+          value={data ? faCompact(data.ruleReplies) : toFa(0)}
           icon={Workflow}
           accent="violet"
           loading={isLoading}
         />
         <StatCard
-          label="Escalation rate"
-          value={data ? `${data.escalationRate}%` : "0%"}
+          label={t.analytics.escalationRate}
+          value={data ? `${toFa(data.escalationRate)}٪` : `${toFa(0)}٪`}
           icon={TrendingUp}
           accent={escalationTone}
           loading={isLoading}
         />
         <StatCard
-          label="Failed"
-          value={data ? compactNumber(data.failed) : 0}
+          label={t.analytics.failed}
+          value={data ? faCompact(data.failed) : toFa(0)}
           icon={XCircle}
           accent="amber"
           loading={isLoading}
@@ -506,12 +522,10 @@ export function AnalyticsView() {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
               <Inbox className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="mt-3 text-sm font-medium">
-              No conversations in this period yet
-            </p>
+            <p className="mt-3 text-sm font-medium">{t.analytics.noData}</p>
             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-              Try simulating an inbound message from the dashboard, or switch to
-              a wider date range.
+              یک پیام ورودی را از داشبورد شبیه‌سازی کنید یا به محدوده تاریخ
+              گسترده‌تری تغییر دهید.
             </p>
           </CardContent>
         </Card>
@@ -523,10 +537,10 @@ export function AnalyticsView() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <TrendingUp className="h-4 w-4 text-primary" />
-                  Response volume over time
+                  {t.analytics.volumeOverTime}
                 </CardTitle>
                 <CardDescription>
-                  Daily inbound conversations handled (total + AI overlay).
+                  گفتگوهای ورودی روزانه پردازش‌شده (مجموع + پوشش هوش مصنوعی).
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -538,11 +552,11 @@ export function AnalyticsView() {
                     <div className="mt-3 flex items-center justify-center gap-5 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5">
                         <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--chart-1)" }} />
-                        Total replies
+                        مجموع پاسخ‌ها
                       </span>
                       <span className="flex items-center gap-1.5">
                         <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--chart-2)" }} />
-                        AI replies
+                        پاسخ‌های هوش مصنوعی
                       </span>
                     </div>
                   </>
@@ -554,10 +568,10 @@ export function AnalyticsView() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  AI vs Rule split
+                  {t.analytics.aiVsRule}
                 </CardTitle>
                 <CardDescription>
-                  How replies were generated this period.
+                  پاسخ‌ها در این دوره چطور تولید شده‌اند.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -572,11 +586,11 @@ export function AnalyticsView() {
                     <div className="mt-3 flex items-center justify-center gap-5 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5">
                         <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--chart-1)" }} />
-                        AI · {compactNumber(data?.aiVsRule.ai ?? 0)}
+                        هوش مصنوعی · {faNumber(data?.aiVsRule.ai ?? 0)}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--chart-3)" }} />
-                        Rule · {compactNumber(data?.aiVsRule.rule ?? 0)}
+                        قانون · {faNumber(data?.aiVsRule.rule ?? 0)}
                       </span>
                     </div>
                   </>
@@ -585,17 +599,15 @@ export function AnalyticsView() {
             </Card>
           </section>
 
-          {/* Channel breakdown + Escalation highlight */}
+          {/* Channel breakdown + Escalation highlight + Top intents */}
           <section className="grid gap-4 lg:grid-cols-3">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <MessagesSquare className="h-4 w-4 text-primary" />
-                  Channel breakdown
+                  {t.analytics.channelBreakdown}
                 </CardTitle>
-                <CardDescription>
-                  Where your inbound volume is coming from.
-                </CardDescription>
+                <CardDescription>{t.analytics.channelDesc}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -614,10 +626,10 @@ export function AnalyticsView() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <TrendingUp className="h-4 w-4 text-primary" />
-                  Escalation rate
+                  {t.analytics.escalationCard}
                 </CardTitle>
                 <CardDescription>
-                  Conversations needing human follow-up.
+                  گفتگوهای نیازمند پیگیری انسانی.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center py-6">
@@ -626,6 +638,7 @@ export function AnalyticsView() {
                 ) : (
                   <>
                     <div
+                      dir="ltr"
                       className={cn(
                         "text-5xl font-bold tracking-tight",
                         escalationTone === "amber" && "text-amber-500",
@@ -633,14 +646,14 @@ export function AnalyticsView() {
                         escalationTone === "primary" && "text-primary",
                       )}
                     >
-                      {escalationRate}%
+                      {toFa(escalationRate)}٪
                     </div>
                     <p className="mt-3 max-w-xs text-center text-xs text-muted-foreground">
                       {escalationRate > 20
-                        ? "Higher than ideal — consider tuning your rules to handle more cases automatically."
+                        ? "بالاتر از حد مطلوب — برای پاسخ خودکار به موارد بیشتر، قوانین خود را تنظیم کنید."
                         : escalationRate < 10
-                          ? "Healthy. Most conversations are resolved automatically."
-                          : "Within a normal range. Keep an eye on the trend."}
+                          ? "سالم. بیشتر گفتگوها به‌صورت خودکار حل می‌شوند."
+                          : "در محدوده نرمال. روند را زیر نظر داشته باشید."}
                     </p>
                     <Badge
                       variant="outline"
@@ -653,10 +666,10 @@ export function AnalyticsView() {
                       )}
                     >
                       {escalationRate > 20
-                        ? "Needs attention"
+                        ? "نیازمند توجه"
                         : escalationRate < 10
-                          ? "Healthy"
-                          : "Normal"}
+                          ? "سالم"
+                          : "نرمال"}
                     </Badge>
                   </>
                 )}
@@ -667,10 +680,10 @@ export function AnalyticsView() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Zap className="h-4 w-4 text-primary" />
-                  Top intents
+                  {t.analytics.topIntents}
                 </CardTitle>
                 <CardDescription>
-                  Detected customer intents (most common first).
+                  نیت‌های مشتری شناسایی‌شده (اول بیشترین).
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -683,8 +696,7 @@ export function AnalyticsView() {
                 ) : (
                   <BarList
                     items={topIntents}
-                    capitalize
-                    emptyText="No intents detected yet."
+                    emptyText="هنوز نیت‌ای شناسایی نشده است."
                   />
                 )}
               </CardContent>
@@ -697,10 +709,10 @@ export function AnalyticsView() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Tag className="h-4 w-4 text-primary" />
-                  Top trigger rules
+                  {t.analytics.topRules}
                 </CardTitle>
                 <CardDescription>
-                  Which automation rules fired most often this period.
+                  کدام قوانین خودکارسازی در این دوره بیشتر فعال شده‌اند.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -714,7 +726,7 @@ export function AnalyticsView() {
                   <div className="grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
                     <BarList
                       items={topKeywords}
-                      emptyText="No rules have matched yet."
+                      emptyText="هنوز قانونی تطابق نداشته است."
                     />
                   </div>
                 )}

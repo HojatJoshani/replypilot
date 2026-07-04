@@ -6,8 +6,9 @@ import { useAppStore } from "@/lib/store";
 import { useApi, useApiMutation } from "@/hooks/use-api";
 import { api } from "@/lib/api-client";
 import type { DashboardStatsDto, InstagramAccountDto } from "@/types";
-import { CHANNELS, PLANS } from "@/lib/constants";
-import { fmtDate, timeAgo, initials } from "@/lib/format";
+import { CHANNELS, PLANS, ACCOUNT_STATUSES } from "@/lib/constants";
+import { faDate, faTimeAgo, faTimeUntil, initials } from "@/lib/format";
+import { t, toFa, faNumber } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ import {
   ShieldCheck,
   KeyRound,
   Sparkles,
-  ArrowRight,
+  ArrowLeft,
 } from "lucide-react";
 
 interface TenantUser {
@@ -76,20 +77,23 @@ interface TenantResp {
   };
 }
 
+const ROLES: Record<string, string> = t.roles as unknown as Record<string, string>;
+
 const REQUIRED_SCOPES = [
-  { id: "instagram_business_basic", label: "Basic display", desc: "Read your profile and media" },
-  { id: "instagram_business_manage_messages", label: "Manage messages", desc: "Read & send DMs" },
-  { id: "instagram_business_manage_comments", label: "Manage comments", desc: "Read & reply to comments" },
-  { id: "instagram_business_content_publish", label: "Content publish", desc: "Schedule posts (optional)" },
+  { id: "instagram_business_basic", label: t.settings.scopeBasic, desc: "خواندن پروفایل و رسانه شما" },
+  { id: "instagram_business_manage_messages", label: t.settings.scopeMessages, desc: "خواندن و ارسال دایرکت" },
+  { id: "instagram_business_manage_comments", label: t.settings.scopeComments, desc: "خواندن و پاسخ به کامنت‌ها" },
+  { id: "instagram_business_content_publish", label: t.settings.scopePublish, desc: "زمان‌بندی پست‌ها" },
 ];
 
 function ConnectAccountCta() {
   async function connect() {
     try {
-      const { url } = await api.get<{ url: string }>("/api/instagram/oauth/start");
+      const { url, demoMode } = await api.get<{ url: string; demoMode: boolean }>("/api/instagram/oauth/start");
+      if (demoMode) toast.info("حالت دمو — در حال شبیه‌سازی اتصال…");
       window.location.href = url;
     } catch {
-      toast.error("Could not start Instagram connection");
+      toast.error("شروع اتصال به اینستاگرام ناموفق بود");
     }
   }
   return (
@@ -98,40 +102,22 @@ function ConnectAccountCta() {
         <Instagram className="h-10 w-10 text-primary" />
       </div>
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Connect your first Instagram account</h3>
-        <p className="text-sm text-muted-foreground max-w-sm">
-          ReplyPilot needs a business Instagram account to start automating your DMs and comments.
-        </p>
+        <h3 className="text-lg font-semibold">{t.settings.noAccounts}</h3>
+        <p className="text-sm text-muted-foreground max-w-sm">{t.settings.noAccountsDesc}</p>
       </div>
       <Button onClick={connect} className="ig-gradient text-white">
-        <Plus className="h-4 w-4" /> Connect Instagram
+        <Plus className="h-4 w-4" /> {t.settings.connectInstagram}
       </Button>
     </div>
   );
 }
 
 function AccountRow({ account, onDisconnect }: { account: InstagramAccountDto; onDisconnect: (id: string) => void }) {
-  const statusBadge = account.status === "active"
-    ? "bg-emerald-100 text-emerald-700"
-    : account.status === "expired"
-      ? "bg-amber-100 text-amber-700"
-      : "bg-muted text-muted-foreground";
-  const statusLabel = account.status === "active"
-    ? "Connected"
-    : account.status === "expired"
-      ? "Token expired"
-      : "Disconnected";
-
-  // token expiry display
-  let expiry: string;
-  if (!account.tokenExpiresAt) {
-    expiry = "—";
-  } else {
-    const ms = new Date(account.tokenExpiresAt).getTime() - Date.now();
-    if (ms <= 0) expiry = "expired";
-    else if (ms < 24 * 60 * 60 * 1000) expiry = `expires in ${Math.round(ms / (60 * 60 * 1000))}h`;
-    else expiry = `expires in ${Math.round(ms / (24 * 60 * 60 * 1000))}d`;
-  }
+  const statusDef = ACCOUNT_STATUSES.find((s) => s.value === account.status);
+  const statusBadge = statusDef?.color || "bg-muted text-muted-foreground";
+  const statusLabel = statusDef?.label || account.status;
+  // strip text-* from bg-only dot classes for badges
+  const badgeBg = statusBadge.split(" ").find((c) => c.startsWith("bg-")) || "bg-muted";
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
@@ -143,14 +129,13 @@ function AccountRow({ account, onDisconnect }: { account: InstagramAccountDto; o
       </Avatar>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium">@{account.igUsername}</span>
-          <Badge className={cn("text-[10px]", statusBadge)}>{statusLabel}</Badge>
+          <span dir="ltr" className="truncate text-sm font-medium">@{account.igUsername}</span>
+          <Badge className={cn("text-[10px]", badgeBg, "text-white")}>{statusLabel}</Badge>
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-          <span>{account.followerCount.toLocaleString()} followers</span>
-          <span>· connected {timeAgo(account.connectedAt)}</span>
-          <span>· token {expiry}</span>
-          <span>· {account.activeRules} active rule{account.activeRules === 1 ? "" : "s"}</span>
+          <span>{t.settings.followers}: {faNumber(account.followerCount)}</span>
+          <span>· {t.settings.connectedSince} {faTimeAgo(account.connectedAt)}</span>
+          <span>· {t.settings.tokenExpires}: {faTimeUntil(account.tokenExpiresAt)}</span>
         </div>
       </div>
       <Button
@@ -158,7 +143,7 @@ function AccountRow({ account, onDisconnect }: { account: InstagramAccountDto; o
         size="icon"
         className="h-8 w-8 text-destructive hover:text-destructive"
         onClick={() => onDisconnect(account.id)}
-        aria-label={`Disconnect @${account.igUsername}`}
+        aria-label={`${t.settings.disconnect} @${account.igUsername}`}
       >
         <Trash2 className="h-4 w-4" />
       </Button>
@@ -181,21 +166,19 @@ function InstagramConnectionTab({
     <div className="space-y-4">
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertTitle>Demo mode</AlertTitle>
-        <AlertDescription>
-          Connecting simulates a business account. Configure a real Meta App (see README) to go live with actual DMs and comments.
-        </AlertDescription>
+        <AlertTitle>{t.common.demoMode}</AlertTitle>
+        <AlertDescription>{t.settings.demoNote}</AlertDescription>
       </Alert>
 
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-base">Connected Instagram accounts</CardTitle>
-              <CardDescription>Manage the business accounts ReplyPilot can read & reply from.</CardDescription>
+              <CardTitle className="text-base">{t.settings.connectedAccounts}</CardTitle>
+              <CardDescription>{t.settings.connectedAccountsDesc}</CardDescription>
             </div>
             <Button onClick={onConnect} className="ig-gradient text-white">
-              <Plus className="h-4 w-4" /> Connect Instagram
+              <Plus className="h-4 w-4" /> {t.settings.connectInstagram}
             </Button>
           </div>
         </CardHeader>
@@ -204,7 +187,7 @@ function InstagramConnectionTab({
             Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)
           ) : accounts.length === 0 ? (
             <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-              No accounts connected yet. Click <span className="font-medium text-foreground">Connect Instagram</span> to begin.
+              هنوز حسابی متصل نشده است. روی <span className="font-medium text-foreground">{t.settings.connectInstagram}</span> کلیک کنید.
             </div>
           ) : (
             accounts.map((a) => <AccountRow key={a.id} account={a} onDisconnect={onDisconnect} />)
@@ -216,11 +199,9 @@ function InstagramConnectionTab({
         <CardHeader>
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-primary" />
-            <CardTitle className="text-base">Required permissions</CardTitle>
+            <CardTitle className="text-base">{t.settings.requiredScopes}</CardTitle>
           </div>
-          <CardDescription>
-            ReplyPilot requests the minimum scopes required to run your automation.
-          </CardDescription>
+          <CardDescription>{t.settings.scopesDesc}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {REQUIRED_SCOPES.map((s) => (
@@ -229,7 +210,7 @@ function InstagramConnectionTab({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium">{s.label}</span>
-                  <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{s.id}</code>
+                  <code dir="ltr" className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{s.id}</code>
                 </div>
                 <p className="text-[11px] text-muted-foreground">{s.desc}</p>
               </div>
@@ -250,45 +231,45 @@ function BusinessProfileTab({ tenant, loading }: { tenant: TenantResp | undefine
       </div>
     );
   }
-  const t = tenant.tenant;
-  const planDef = PLANS.find((p) => p.value === t.plan);
+  const tnt = tenant.tenant;
+  const planDef = PLANS.find((p) => p.value === tnt.plan);
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 text-primary" />
-            <CardTitle className="text-base">Business profile</CardTitle>
+            <CardTitle className="text-base">{t.settings.tenantProfile}</CardTitle>
           </div>
-          <CardDescription>Your tenant/workspace details.</CardDescription>
+          <CardDescription>جزئیات فضای کار شما.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Workspace name</span>
-            <span className="font-medium">{t.name}</span>
+            <span className="text-muted-foreground">نام فضای کار</span>
+            <span className="font-medium">{tnt.name}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Plan</span>
-            <Badge className="bg-primary/10 text-primary">{planDef?.label || t.plan}</Badge>
+            <span className="text-muted-foreground">{t.billing.plan}</span>
+            <Badge className="bg-primary/10 text-primary">{planDef?.label || tnt.plan}</Badge>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Status</span>
-            <span className="font-medium capitalize">{t.status}</span>
+            <span className="text-muted-foreground">وضعیت</span>
+            <span className="font-medium">{tnt.status === "active" ? "فعال" : tnt.status}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Created</span>
-            <span className="font-medium">{fmtDate(t.createdAt)}</span>
+            <span className="text-muted-foreground">تاریخ ایجاد</span>
+            <span className="font-medium">{faDate(tnt.createdAt)}</span>
           </div>
-          {t.subscription && (
+          {tnt.subscription && (
             <>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Seats</span>
-                <span className="font-medium">{t.subscription.seats}</span>
+                <span className="text-muted-foreground">{t.billing.seats}</span>
+                <span className="font-medium">{faNumber(tnt.subscription.seats)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Renews</span>
+                <span className="text-muted-foreground">تمدید در</span>
                 <span className="font-medium">
-                  {t.subscription.currentPeriodEnd ? fmtDate(t.subscription.currentPeriodEnd) : "—"}
+                  {tnt.subscription.currentPeriodEnd ? faDate(tnt.subscription.currentPeriodEnd) : "—"}
                 </span>
               </div>
             </>
@@ -300,12 +281,12 @@ function BusinessProfileTab({ tenant, loading }: { tenant: TenantResp | undefine
         <CardHeader>
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
-            <CardTitle className="text-base">Team members</CardTitle>
+            <CardTitle className="text-base">{t.settings.teamMembers}</CardTitle>
           </div>
-          <CardDescription>{t.users.length} member{t.users.length === 1 ? "" : "s"} on this workspace.</CardDescription>
+          <CardDescription>{faNumber(tnt.users.length)} عضو در این فضای کار.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {t.users.map((u) => (
+          {tnt.users.map((u) => (
             <div key={u.id} className="flex items-center gap-3 rounded-md border p-2.5">
               <Avatar className="h-9 w-9">
                 <AvatarFallback className="ig-gradient text-white text-xs font-semibold">
@@ -314,9 +295,9 @@ function BusinessProfileTab({ tenant, loading }: { tenant: TenantResp | undefine
               </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">{u.name || u.email}</div>
-                <div className="truncate text-[11px] text-muted-foreground">{u.email}</div>
+                <div dir="ltr" className="truncate text-[11px] text-muted-foreground">{u.email}</div>
               </div>
-              <Badge variant="outline" className="capitalize text-[10px]">{u.role}</Badge>
+              <Badge variant="outline" className="text-[10px]">{ROLES[u.role] || u.role}</Badge>
             </div>
           ))}
         </CardContent>
@@ -337,28 +318,28 @@ function SimulatorTab({ accountId }: { accountId: string }) {
   >("POST", () => "/api/instagram/simulate", [["conversations"], ["dashboard-stats"]]);
 
   const examples = [
-    "Hi! Do you ship internationally?",
-    "What's the price of the vitamin C serum?",
-    "I'd like to book an appointment",
-    "Just placed an order, when will it ship?",
+    "سلام! ارسال بین‌المللی دارید؟",
+    "قیمت سرم ویتامین سی چنده؟",
+    "می‌خواستم وقت رزرو کنم",
+    "همین الان سفارش دادم، کی ارسال میشه؟",
   ];
 
   function send() {
     if (!message.trim()) {
-      toast.error("Type a message to simulate");
+      toast.error("برای شبیه‌سازی، یک پیام بنویسید");
       return;
     }
     simMut.mutate(
       { accountId, channel, message: message.trim(), fromUsername: fromUsername.trim() || undefined },
       {
         onSuccess: () =>
-          toast.success("Simulated message sent — check the Inbox", {
+          toast.success(t.settings.simulatorSent, {
             action: {
-              label: "Open Inbox",
+              label: t.settings.openInbox,
               onClick: () => setView("inbox"),
             },
           }),
-        onError: (e) => toast.error(e.message || "Simulation failed"),
+        onError: (e) => toast.error(e.message || "شبیه‌سازی ناموفق بود"),
       },
     );
     setMessage("");
@@ -369,16 +350,16 @@ function SimulatorTab({ accountId }: { accountId: string }) {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Film className="h-4 w-4 text-primary" />
-          <CardTitle className="text-base">Test your automation 🎬</CardTitle>
+          <CardTitle className="text-base">{t.settings.simulatorDesc}</CardTitle>
         </div>
         <CardDescription>
-          Inject a simulated inbound Instagram event so the full pipeline (queue → rules → AI → reply → log) runs end-to-end — no real Meta app required.
+          یک رویداد ورودی اینستاگرام شبیه‌سازی کنید تا کل خط‌لوله (صف → قوانین → هوش مصنوعی → پاسخ → ثبت) سرتاسری اجرا شود — به اپ متا نیاز نیست.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="sim-channel">Channel</Label>
+            <Label htmlFor="sim-channel">{t.dashboard.channel}</Label>
             <Select value={channel} onValueChange={(v) => setChannel(v as typeof channel)}>
               <SelectTrigger id="sim-channel">
                 <SelectValue />
@@ -391,22 +372,23 @@ function SimulatorTab({ accountId }: { accountId: string }) {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="sim-from">From @username (optional)</Label>
+            <Label htmlFor="sim-from">@نام کاربری فرستنده (اختیاری)</Label>
             <Input
               id="sim-from"
               value={fromUsername}
               onChange={(e) => setFromUsername(e.target.value)}
               placeholder="demo_customer"
+              dir="ltr"
             />
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="sim-message">Inbound message</Label>
+          <Label htmlFor="sim-message">{t.dashboard.message}</Label>
           <Input
             id="sim-message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type what the customer would say…"
+            placeholder="پیامی که مشتری می‌فرستد را بنویسید…"
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
@@ -427,9 +409,9 @@ function SimulatorTab({ accountId }: { accountId: string }) {
           ))}
         </div>
         <div className="flex items-center justify-between gap-2 pt-1">
-          <p className="text-[11px] text-muted-foreground">⌘/Ctrl + Enter to send</p>
+          <p className="text-[11px] text-muted-foreground">⌘/Ctrl + Enter برای ارسال</p>
           <Button onClick={send} disabled={simMut.isPending} className="ig-gradient text-white">
-            <Send className="h-4 w-4" /> {simMut.isPending ? "Sending…" : "Send simulated inbound"}
+            <Send className="h-4 w-4" /> {simMut.isPending ? t.common.sending : t.common.send}
           </Button>
         </div>
       </CardContent>
@@ -442,31 +424,31 @@ function DangerZoneCard() {
   return (
     <Card className="border-destructive/30">
       <CardHeader>
-        <CardTitle className="text-base text-destructive">Danger zone</CardTitle>
-        <CardDescription>Sign out of your ReplyPilot account on this device.</CardDescription>
+        <CardTitle className="text-base text-destructive">{t.settings.dangerZone}</CardTitle>
+        <CardDescription>از حساب ریپلای‌پایلوت روی این دستگاه خارج شوید.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          You can sign back in any time with your email and password.
+          هر زمان می‌توانید با ایمیل و رمز عبور خود دوباره وارد شوید.
         </p>
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => setConfirmOpen(true)}>
-            <LogOut className="h-4 w-4" /> Sign out
+            <LogOut className="h-4 w-4" /> {t.settings.signOut}
           </Button>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Sign out of ReplyPilot?</AlertDialogTitle>
+              <AlertDialogTitle>{t.settings.signOutConfirm}</AlertDialogTitle>
               <AlertDialogDescription>
-                You will be returned to the login screen. Any unsaved changes will be lost.
+                به صفحه ورود بازمی‌گردید. تغییرات ذخیره‌نشده از بین می‌روند.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => signOut({ redirect: false }).then(() => window.location.reload())}
                 className="bg-destructive text-white hover:bg-destructive/90"
               >
-                Sign out
+                {t.settings.signOut}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -498,10 +480,10 @@ export function SettingsView() {
   async function connect() {
     try {
       const { url, demoMode } = await api.get<{ url: string; demoMode: boolean }>("/api/instagram/oauth/start");
-      if (demoMode) toast.info("Demo mode — simulating a connection…");
+      if (demoMode) toast.info("حالت دمو — در حال شبیه‌سازی اتصال…");
       window.location.href = url;
     } catch {
-      toast.error("Could not start Instagram connection");
+      toast.error("شروع اتصال به اینستاگرام ناموفق بود");
     }
   }
 
@@ -509,19 +491,19 @@ export function SettingsView() {
     disconnectMut.mutate(
       { id },
       {
-        onSuccess: () => toast.success("Account disconnected"),
-        onError: (e) => toast.error(e.message || "Failed to disconnect"),
+        onSuccess: () => toast.success("حساب قطع شد"),
+        onError: (e) => toast.error(e.message || "قطع اتصال ناموفق بود"),
       },
     );
   }
 
-  // No selected account but at least the user is on Settings — show onboarding CTA only if NO accounts at all
+  // No accounts at all → onboarding CTA
   if (accounts.length === 0 && !accountsLoading) {
     return (
       <div className="p-4 md:p-6 space-y-6">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground">Connect Instagram, manage your workspace, and test automation.</p>
+          <h1 className="text-xl font-semibold tracking-tight">{t.settings.title}</h1>
+          <p className="text-sm text-muted-foreground">{t.settings.subtitle}</p>
         </div>
         <div className="rounded-xl border bg-card">
           <ConnectAccountCta />
@@ -537,14 +519,12 @@ export function SettingsView() {
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground">
-            Connect Instagram, manage your workspace, and test automation.
-          </p>
+          <h1 className="text-xl font-semibold tracking-tight">{t.settings.title}</h1>
+          <p className="text-sm text-muted-foreground">{t.settings.subtitle}</p>
         </div>
         {selectedAccountId && (
           <Button variant="outline" onClick={() => setView("inbox")}>
-            Go to Inbox <ArrowRight className="h-4 w-4" />
+            {t.settings.openInbox} <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -552,16 +532,16 @@ export function SettingsView() {
       <Tabs defaultValue="instagram" className="w-full">
         <TabsList className="w-full max-w-md grid grid-cols-4 h-auto">
           <TabsTrigger value="instagram" className="text-xs">
-            <Instagram className="h-3.5 w-3.5" /> Instagram
+            <Instagram className="h-3.5 w-3.5" /> {t.settings.instagram}
           </TabsTrigger>
           <TabsTrigger value="business" className="text-xs">
-            <Building2 className="h-3.5 w-3.5" /> Business
+            <Building2 className="h-3.5 w-3.5" /> {t.settings.business}
           </TabsTrigger>
           <TabsTrigger value="simulator" className="text-xs">
-            <Film className="h-3.5 w-3.5" /> Simulator
+            <Film className="h-3.5 w-3.5" /> {t.settings.simulator}
           </TabsTrigger>
           <TabsTrigger value="account" className="text-xs">
-            <LogOut className="h-3.5 w-3.5" /> Account
+            <LogOut className="h-3.5 w-3.5" /> {t.settings.account}
           </TabsTrigger>
         </TabsList>
 
@@ -587,27 +567,27 @@ export function SettingsView() {
                   <CardHeader>
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-primary" />
-                      <CardTitle className="text-base">This period at a glance</CardTitle>
+                      <CardTitle className="text-base">یک نگاه به این دوره</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div className="rounded-md border p-3">
-                      <div className="text-xs text-muted-foreground">AI replies used</div>
-                      <div className="text-lg font-semibold">{stats.aiRepliesUsed.toLocaleString()}</div>
+                      <div className="text-xs text-muted-foreground">پاسخ‌های هوش مصنوعی استفاده‌شده</div>
+                      <div className="text-lg font-semibold">{faNumber(stats.aiRepliesUsed)}</div>
                     </div>
                     <div className="rounded-md border p-3">
-                      <div className="text-xs text-muted-foreground">AI limit</div>
+                      <div className="text-xs text-muted-foreground">محدودیت هوش مصنوعی</div>
                       <div className="text-lg font-semibold">
-                        {stats.aiRepliesLimit >= 999999 ? "∞" : stats.aiRepliesLimit.toLocaleString()}
+                        {stats.aiRepliesLimit >= 999999 ? "∞" : faNumber(stats.aiRepliesLimit)}
                       </div>
                     </div>
                     <div className="rounded-md border p-3">
-                      <div className="text-xs text-muted-foreground">Open follow-ups</div>
-                      <div className="text-lg font-semibold">{stats.escalatedOpen}</div>
+                      <div className="text-xs text-muted-foreground">پیگیری‌های باز</div>
+                      <div className="text-lg font-semibold">{faNumber(stats.escalatedOpen)}</div>
                     </div>
                     <div className="rounded-md border p-3">
-                      <div className="text-xs text-muted-foreground">New leads</div>
-                      <div className="text-lg font-semibold">{stats.leadsNew}</div>
+                      <div className="text-xs text-muted-foreground">سرنخ‌های جدید</div>
+                      <div className="text-lg font-semibold">{faNumber(stats.leadsNew)}</div>
                     </div>
                   </CardContent>
                 </Card>
@@ -616,7 +596,7 @@ export function SettingsView() {
           ) : (
             <Card>
               <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Select an Instagram account in the top bar to use the simulator.
+                برای استفاده از شبیه‌ساز، یک حساب اینستاگرام در نوار بالا انتخاب کنید.
               </CardContent>
             </Card>
           )}

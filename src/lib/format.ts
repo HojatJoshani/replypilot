@@ -1,34 +1,23 @@
-import { formatDistanceToNow, format } from "date-fns";
+// کمک‌تابع‌های فرمت — همگی فارسی/شمسی.
+// نام‌های قدیمی به‌عنوان alias برای توابع فارسی نگه داشته شده‌اند تا کدهای
+// موجود بدون تغییر کار کنند ولی خروجی فارسی بدهند.
 
-export function timeAgo(date: string | Date | null | undefined): string {
-  if (!date) return "—";
-  try {
-    return formatDistanceToNow(new Date(date), { addSuffix: true });
-  } catch {
-    return "—";
-  }
-}
+export {
+  toFa,
+  faNumber,
+  faCompact,
+  faDate,
+  faDateTime,
+  faTimeAgo,
+  faTimeUntil,
+} from "./i18n";
 
-export function fmtDate(date: string | Date | null | undefined, pattern = "MMM d, yyyy"): string {
-  if (!date) return "—";
-  try {
-    return format(new Date(date), pattern);
-  } catch {
-    return "—";
-  }
-}
-
-export function fmtDateTime(date: string | Date | null | undefined): string {
-  return fmtDate(date, "MMM d, yyyy · h:mm a");
-}
+// alias های سازگار (برای کدهای موجود)
+export { faTimeAgo as timeAgo, faDate as fmtDate, faDateTime as fmtDateTime, faCompact as compactNumber };
 
 export function initials(name?: string | null): string {
-  if (!name) return "?";
-  return name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
-}
-
-export function compactNumber(n: number): string {
-  return Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+  if (!name) return "؟";
+  return name.trim().charAt(0).toUpperCase();
 }
 
 export function splitTags(tags: string): string[] {

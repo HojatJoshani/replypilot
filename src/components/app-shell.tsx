@@ -17,6 +17,7 @@ import { SettingsView } from "@/components/views/settings-view";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import type { InstagramAccountDto } from "@/types";
+import { t } from "@/lib/i18n";
 
 export function AppShell() {
   const { data: session, status } = useSession();
@@ -62,8 +63,7 @@ export function AppShell() {
           {view === "settings" && <SettingsView />}
         </main>
         <footer className="mt-auto border-t bg-background/80 px-4 py-3 text-center text-xs text-muted-foreground backdrop-blur">
-          ReplyPilot · Instagram automation for growing businesses ·{" "}
-          <span className="text-foreground/70">Demo mode active</span> — no real Instagram API calls are sent.
+          {t.demo.footer}
         </footer>
       </div>
     </div>

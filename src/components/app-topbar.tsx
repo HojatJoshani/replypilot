@@ -16,7 +16,8 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api-client";
-import { initials } from "@/lib/format";
+import { initials, toFa } from "@/lib/format";
+import { t, faNumber } from "@/lib/i18n";
 import type { InstagramAccountDto } from "@/types";
 import { toast } from "sonner";
 
@@ -36,7 +37,7 @@ export function AppTopbar() {
       const { url } = await api.get<{ url: string }>("/api/instagram/oauth/start");
       window.location.href = url;
     } catch {
-      toast.error("Could not start Instagram connection");
+      toast.error("شروع اتصال اینستاگرام ناموفق بود");
     }
   }
 
@@ -46,26 +47,26 @@ export function AppTopbar() {
         <Menu className="h-5 w-5" />
       </Button>
 
-      {/* Account selector */}
+      {/* انتخابگر حساب */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="gap-2 max-w-[240px]">
             {selected ? (
               <>
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span className="truncate">@{selected.igUsername}</span>
+                <span className="truncate" dir="ltr">@{selected.igUsername}</span>
               </>
             ) : (
               <>
                 <Plus className="h-4 w-4" />
-                <span>Connect account</span>
+                <span>اتصال حساب</span>
               </>
             )}
             <ChevronDown className="h-3.5 w-3.5 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64">
-          <DropdownMenuLabel className="text-xs text-muted-foreground">Instagram accounts</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-xs text-muted-foreground">حساب‌های اینستاگرام</DropdownMenuLabel>
           {accounts.length > 0 && <DropdownMenuSeparator />}
           {accounts.map((a) => (
             <DropdownMenuItem
@@ -74,22 +75,22 @@ export function AppTopbar() {
               className="gap-2"
             >
               <span className={`h-2 w-2 rounded-full ${a.status === "active" ? "bg-emerald-500" : a.status === "expired" ? "bg-amber-500" : "bg-muted-foreground"}`} />
-              <span className="flex-1 truncate">@{a.igUsername}</span>
-              <span className="text-xs text-muted-foreground">{a.followerCount.toLocaleString()}</span>
+              <span className="flex-1 truncate" dir="ltr">@{a.igUsername}</span>
+              <span className="text-xs text-muted-foreground">{faNumber(a.followerCount)}</span>
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={connectInstagram} className="gap-2 text-primary">
             <Plus className="h-4 w-4" />
-            Connect another account
+            اتصال حساب دیگر
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <div className="ml-auto flex items-center gap-2">
         <Button variant="outline" size="sm" className="hidden sm:flex" onClick={() => setView("rules")}>
-          <Plus className="h-4 w-4 mr-1" />
-          New rule
+          <Plus className="h-4 w-4 ml-1" />
+          {t.dashboard.newRule}
         </Button>
         <ThemeToggle />
         <DropdownMenu>
@@ -101,9 +102,11 @@ export function AppTopbar() {
                   {initials(session?.user?.name || session?.user?.email)}
                 </AvatarFallback>
               </Avatar>
-              <div className="hidden md:block text-left leading-tight">
-                <div className="text-sm font-medium max-w-[120px] truncate">{session?.user?.name || "User"}</div>
-                <div className="text-[10px] text-muted-foreground capitalize">{(session?.user as { role?: string })?.role || "admin"}</div>
+              <div className="hidden md:block text-right leading-tight">
+                <div className="text-sm font-medium max-w-[120px] truncate">{session?.user?.name || "کاربر"}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {(session?.user as { role?: string })?.role === "admin" ? t.roles.admin : t.roles.member}
+                </div>
               </div>
             </Button>
           </DropdownMenuTrigger>
@@ -111,18 +114,18 @@ export function AppTopbar() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col">
                 <span className="text-sm font-medium">{session?.user?.name}</span>
-                <span className="text-xs text-muted-foreground truncate">{session?.user?.email}</span>
+                <span className="text-xs text-muted-foreground truncate" dir="ltr">{session?.user?.email}</span>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setView("settings")}>
-              <UserIcon className="h-4 w-4 mr-2" />
-              Settings
+              <UserIcon className="h-4 w-4 ml-2" />
+              {t.nav.settings}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => signOut({ redirect: false }).then(() => window.location.reload())}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign out
+              <LogOut className="h-4 w-4 ml-2" />
+              {t.settings.signOut}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

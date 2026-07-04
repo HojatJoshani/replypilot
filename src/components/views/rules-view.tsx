@@ -42,6 +42,7 @@ import { useApi, useApiMutation } from "@/hooks/use-api";
 import { useAppStore } from "@/lib/store";
 import { TRIGGER_TYPES, RESPONSE_TYPES, CHANNELS, labelFor } from "@/lib/constants";
 import { splitTags } from "@/lib/format";
+import { t, toFa } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { AutomationRuleDto } from "@/types";
 
@@ -91,6 +92,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const INTENT_LABELS: Record<string, string> = t.intents;
+function intentLabel(intent: string): string {
+  return INTENT_LABELS[intent] ?? intent;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -210,7 +220,7 @@ function ConnectAccountEmptyState() {
       window.location.href = url;
     } catch {
       setConnecting(false);
-      toast.error("Could not start Instagram connection");
+      toast.error("اتصال به اینستاگرام ممکن نشد");
     }
   }
   return (
@@ -219,14 +229,14 @@ function ConnectAccountEmptyState() {
         <div className="flex h-20 w-20 items-center justify-center rounded-2xl ig-gradient text-white shadow-lg">
           <Inbox className="h-9 w-9" />
         </div>
-        <h2 className="mt-6 text-xl font-semibold">Connect Instagram to build automation rules</h2>
+        <h2 className="mt-6 text-xl font-semibold">برای ساخت قوانین، اینستاگرام را متصل کنید</h2>
         <p className="mt-2 max-w-md text-sm text-muted-foreground">
-          Rules trigger on incoming DMs, comments and story replies. Connect an Instagram account to get started.
+          قوانین روی دایرکت‌ها، کامنت‌ها و ریپلای‌های استوری ورودی فعال می‌شوند. برای شروع، یک حساب اینستاگرام متصل کنید.
         </p>
         <Button className="mt-6 ig-gradient text-white hover:opacity-90" onClick={connect} disabled={connecting}>
-          {connecting ? "Redirecting…" : (
+          {connecting ? "در حال هدایت…" : (
             <>
-              <Plus className="h-4 w-4" /> Connect Instagram
+              <Plus className="h-4 w-4" /> {t.dashboard.connectInstagram}
             </>
           )}
         </Button>
@@ -312,15 +322,15 @@ function RulesViewContent({ igAccountId }: { igAccountId: string }) {
     try {
       if (editing) {
         await updateMut.mutateAsync({ id: editing.id, ...payload });
-        toast.success("Rule updated");
+        toast.success(t.rules.updated);
       } else {
         await createMut.mutateAsync(payload);
-        toast.success("Rule created");
+        toast.success(t.rules.saved);
       }
       setDialogOpen(false);
       setEditing(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save rule");
+      toast.error(e instanceof Error ? e.message : "ذخیره قانون ممکن نشد");
     }
   }
 
@@ -331,7 +341,7 @@ function RulesViewContent({ igAccountId }: { igAccountId: string }) {
       {
         onError: (e) => {
           rollback();
-          toast.error(e instanceof Error ? e.message : "Could not update rule");
+          toast.error(e instanceof Error ? e.message : "به‌روزرسانی قانون ممکن نشد");
         },
       },
     );
@@ -341,10 +351,10 @@ function RulesViewContent({ igAccountId }: { igAccountId: string }) {
     setRulesCache((rs) => rs.filter((r) => r.id !== rule.id));
     try {
       await deleteMut.mutateAsync({ id: rule.id });
-      toast.success("Rule deleted");
+      toast.success(t.rules.deleted);
     } catch (e) {
       rollback();
-      toast.error(e instanceof Error ? e.message : "Could not delete rule");
+      toast.error(e instanceof Error ? e.message : "حذف قانون ممکن نشد");
     }
   }
 
@@ -368,9 +378,9 @@ function RulesViewContent({ igAccountId }: { igAccountId: string }) {
       {
         onError: (e) => {
           rollback();
-          toast.error(e instanceof Error ? e.message : "Could not save order");
+          toast.error(e instanceof Error ? e.message : "ذخیره ترتیب ممکن نشد");
         },
-        onSuccess: () => toast.success("Priority updated"),
+        onSuccess: () => toast.success(t.rules.priorityUpdated),
       },
     );
   }
@@ -383,11 +393,11 @@ function RulesViewContent({ igAccountId }: { igAccountId: string }) {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Automation Rules</h1>
-          <p className="text-sm text-muted-foreground">Drag to reorder priority. Higher rules win.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.rules.title}</h1>
+          <p className="text-sm text-muted-foreground">{t.rules.subtitle}</p>
         </div>
         <Button onClick={openNew} className="ig-gradient text-white hover:opacity-90">
-          <Plus className="h-4 w-4" /> New rule
+          <Plus className="h-4 w-4" /> {t.rules.newRule}
         </Button>
       </div>
 
@@ -397,11 +407,11 @@ function RulesViewContent({ igAccountId }: { igAccountId: string }) {
       ) : isError ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Could not load rules</AlertTitle>
+          <AlertTitle>بارگذاری قوانین ناموفق بود</AlertTitle>
           <AlertDescription>
-            {error instanceof Error ? error.message : "Something went wrong."}{" "}
+            {error instanceof Error ? error.message : "خطایی رخ داد."}{" "}
             <button className="underline underline-offset-2 font-medium" onClick={() => refetch()}>
-              Try again
+              تلاش دوباره
             </button>
           </AlertDescription>
         </Alert>
@@ -414,7 +424,7 @@ function RulesViewContent({ igAccountId }: { igAccountId: string }) {
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3 max-h-[70vh] overflow-y-auto scrollbar-thin pr-1 pb-1">
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto scrollbar-thin ps-1 pb-1">
               {rules.map((rule, idx) => (
                 <SortableRuleCard
                   key={rule.id}
@@ -490,7 +500,7 @@ function SortableRuleCard({
       <button
         type="button"
         className="mt-0.5 flex h-8 w-6 cursor-grab touch-none items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing"
-        aria-label={`Drag ${rule.name} to reorder`}
+        aria-label={`برای تغییر ترتیب، ${rule.name} را بکشید`}
         {...attributes}
         {...listeners}
       >
@@ -506,9 +516,9 @@ function SortableRuleCard({
               ? "ig-gradient text-white"
               : "bg-secondary text-secondary-foreground",
           )}
-          title={`Priority ${rank}`}
+          title={`اولویت ${toFa(rank)}`}
         >
-          {rank}
+          {toFa(rank)}
         </span>
       </div>
 
@@ -517,7 +527,7 @@ function SortableRuleCard({
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <h3 className="font-semibold leading-tight truncate">{rule.name}</h3>
           {!rule.isActive && (
-            <Badge variant="secondary" className="text-[10px]">Paused</Badge>
+            <Badge variant="secondary" className="text-[10px]">{t.common.inactive}</Badge>
           )}
         </div>
         <p className="text-xs text-muted-foreground line-clamp-1">
@@ -536,7 +546,7 @@ function SortableRuleCard({
           ))}
           {keywords.length > 0 && (
             <span className="text-[10px] text-muted-foreground">
-              {rule.triggerMatchMode === "all" ? "match ALL" : "match ANY"}
+              {rule.triggerMatchMode === "all" ? t.rules.matchAll : t.rules.matchAny}
             </span>
           )}
           <ResponseChip type={rule.responseType} />
@@ -545,55 +555,55 @@ function SortableRuleCard({
         {/* Preview of static content */}
         {rule.responseType === "static_text" && rule.staticResponse && (
           <p className="text-xs text-muted-foreground italic line-clamp-1">
-            “{rule.staticResponse}”
+            «{rule.staticResponse}»
           </p>
         )}
         {rule.responseType === "static_media" && rule.mediaUrl && (
-          <p className="text-xs text-muted-foreground truncate">📎 {rule.mediaUrl}</p>
+          <p className="text-xs text-muted-foreground truncate" dir="ltr">📎 {rule.mediaUrl}</p>
         )}
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-1.5">
-        <div className="flex items-center gap-2 pr-1">
+        <div className="flex items-center gap-2 ps-1">
           <Label htmlFor={`active-${rule.id}`} className="sr-only">
-            {rule.isActive ? "Pause rule" : "Activate rule"}
+            {rule.isActive ? t.common.inactive : t.common.active}
           </Label>
           <Switch id={`active-${rule.id}`} checked={rule.isActive} onCheckedChange={onToggle} />
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit} aria-label={`Edit ${rule.name}`}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit} aria-label={`${t.common.edit} ${rule.name}`}>
               <Pencil className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Edit</TooltipContent>
+          <TooltipContent>{t.common.edit}</TooltipContent>
         </Tooltip>
         <AlertDialog>
           <Tooltip>
             <TooltipTrigger asChild>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" aria-label={`Delete ${rule.name}`}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" aria-label={`${t.common.delete} ${rule.name}`}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
             </TooltipTrigger>
-            <TooltipContent>Delete</TooltipContent>
+            <TooltipContent>{t.common.delete}</TooltipContent>
           </Tooltip>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete rule?</AlertDialogTitle>
+              <AlertDialogTitle>{t.rules.deleteConfirm}</AlertDialogTitle>
               <AlertDialogDescription>
-                “{rule.name}” will be permanently removed. This cannot be undone.
+                قانون «{rule.name}» برای همیشه حذف می‌شود. این عمل قابل بازگشت نیست.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-white hover:bg-destructive/90"
                 onClick={onDelete}
               >
-                Delete
+                {t.common.delete}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -607,20 +617,20 @@ function ResponseChip({ type }: { type: string }) {
   if (type === "static_text") {
     return (
       <Badge variant="secondary" className="gap-1">
-        <MessageSquare className="h-3 w-3" /> Static text
+        <MessageSquare className="h-3 w-3" /> {t.rules.staticText}
       </Badge>
     );
   }
   if (type === "static_media") {
     return (
       <Badge className="gap-1 bg-violet-500/15 text-violet-700 dark:text-violet-300 border-transparent">
-        <ImageIcon className="h-3 w-3" /> Static media
+        <ImageIcon className="h-3 w-3" /> {t.rules.staticMedia}
       </Badge>
     );
   }
   return (
     <Badge className="gap-1 ig-gradient text-white border-transparent">
-      <Sparkles className="h-3 w-3" /> AI generated
+      <Sparkles className="h-3 w-3" /> {t.rules.aiGenerated}
     </Badge>
   );
 }
@@ -647,9 +657,9 @@ function RuleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto scrollbar-thin">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit rule" : "New automation rule"}</DialogTitle>
+          <DialogTitle>{editing ? t.rules.editRule : t.rules.newRule}</DialogTitle>
           <DialogDescription>
-            Define when this rule fires and what ReplyPilot replies with.
+            تعریف کنید این قانون کِی فعال شود و ریپلای‌پایلوت با چه چیزی پاسخ دهد.
           </DialogDescription>
         </DialogHeader>
         {/* key forces fresh form state every time the dialog opens / target changes */}
@@ -685,13 +695,13 @@ function RuleFormBody({
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!form.name.trim()) e.name = "Name is required";
+    if (!form.name.trim()) e.name = "نام قانون الزامی است";
     if (form.triggerType === "keyword" && !form.triggerKeywords.trim())
-      e.triggerKeywords = "Add at least one keyword";
+      e.triggerKeywords = "حداقل یک کلمه کلیدی وارد کنید";
     if (form.responseType === "static_text" && !form.staticResponse.trim())
-      e.staticResponse = "Static reply is required";
+      e.staticResponse = "متن پاسخ الزامی است";
     if (form.responseType === "static_media" && !form.mediaUrl.trim())
-      e.mediaUrl = "Image URL is required";
+      e.mediaUrl = "آدرس تصویر الزامی است";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -710,12 +720,12 @@ function RuleFormBody({
     <form onSubmit={submit} className="space-y-4">
       {/* Name */}
       <div className="space-y-1.5">
-        <Label htmlFor="rule-name">Rule name</Label>
+        <Label htmlFor="rule-name">{t.rules.name}</Label>
         <Input
           id="rule-name"
           value={form.name}
           onChange={(e) => set("name", e.target.value)}
-          placeholder="e.g. Price question handler"
+          placeholder={t.rules.namePlaceholder}
           autoFocus
           aria-invalid={!!errors.name}
         />
@@ -724,7 +734,7 @@ function RuleFormBody({
 
       {/* Trigger type */}
       <div className="space-y-1.5">
-        <Label htmlFor="rule-trigger">Trigger</Label>
+        <Label htmlFor="rule-trigger">{t.rules.triggerType}</Label>
         <Select value={form.triggerType} onValueChange={(v) => set("triggerType", v as TriggerType)}>
           <SelectTrigger id="rule-trigger" className="w-full">
             <SelectValue />
@@ -744,7 +754,7 @@ function RuleFormBody({
       {isKeyword && (
         <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
           <div className="space-y-1.5">
-            <Label htmlFor="rule-keywords">Keywords</Label>
+            <Label htmlFor="rule-keywords">{t.rules.triggerKeywords}</Label>
             <Input
               id="rule-keywords"
               value={form.triggerKeywords}
@@ -752,21 +762,21 @@ function RuleFormBody({
               placeholder="price, cost, چند, قیمت"
               aria-invalid={!!errors.triggerKeywords}
             />
-            <p className="text-xs text-muted-foreground">Comma-separated. e.g. price, cost, چند, قیمت</p>
+            <p className="text-xs text-muted-foreground">{t.rules.triggerKeywordsHelp}</p>
             {errors.triggerKeywords && (
               <p className="text-xs text-destructive">{errors.triggerKeywords}</p>
             )}
           </div>
           <div className="space-y-1.5">
-            <Label>Match mode</Label>
+            <Label>{t.rules.matchMode}</Label>
             <RadioGroup
               value={form.triggerMatchMode}
               onValueChange={(v) => set("triggerMatchMode", v as MatchMode)}
               className="grid grid-cols-2 gap-2"
             >
               {[
-                { value: "any", label: "Match ANY", hint: "Fire if any keyword is present" },
-                { value: "all", label: "Match ALL", hint: "Fire only if all keywords are present" },
+                { value: "any", label: t.rules.matchAny, hint: "با وجود هر کلمه‌ای فعال می‌شود" },
+                { value: "all", label: t.rules.matchAll, hint: "فقط اگر همه کلمات موجود باشند فعال می‌شود" },
               ].map((opt) => (
                 <label
                   key={opt.value}
@@ -787,7 +797,7 @@ function RuleFormBody({
 
       {/* Response type */}
       <div className="space-y-1.5">
-        <Label htmlFor="rule-response">Response</Label>
+        <Label htmlFor="rule-response">{t.rules.responseType}</Label>
         <Select value={form.responseType} onValueChange={(v) => set("responseType", v as ResponseType)}>
           <SelectTrigger id="rule-response" className="w-full">
             <SelectValue />
@@ -806,12 +816,12 @@ function RuleFormBody({
       {/* Response fields (conditional) */}
       {form.responseType === "static_text" && (
         <div className="space-y-1.5">
-          <Label htmlFor="rule-static">Reply message</Label>
+          <Label htmlFor="rule-static">{t.rules.staticResponse}</Label>
           <Textarea
             id="rule-static"
             value={form.staticResponse}
             onChange={(e) => set("staticResponse", e.target.value)}
-            placeholder="Hi! Thanks for reaching out. Our prices start at…"
+            placeholder="سلام! ممنون از پیامتون. قیمت‌ها از … شروع می‌شه."
             rows={4}
             aria-invalid={!!errors.staticResponse}
           />
@@ -821,50 +831,49 @@ function RuleFormBody({
 
       {form.responseType === "static_media" && (
         <div className="space-y-1.5">
-          <Label htmlFor="rule-media">Image URL</Label>
+          <Label htmlFor="rule-media">{t.rules.mediaUrl}</Label>
           <Input
             id="rule-media"
             value={form.mediaUrl}
             onChange={(e) => set("mediaUrl", e.target.value)}
             placeholder="https://…/price-list.png"
+            dir="ltr"
             aria-invalid={!!errors.mediaUrl}
           />
-          <p className="text-xs text-muted-foreground">A direct image URL ReplyPilot will attach to the reply.</p>
+          <p className="text-xs text-muted-foreground">یک آدرس تصویر مستقیم که ریپلای‌پایلوت به پاسخ ضمیمه می‌کند.</p>
           {errors.mediaUrl && <p className="text-xs text-destructive">{errors.mediaUrl}</p>}
         </div>
       )}
 
       {form.responseType === "ai_generated" && (
         <div className="space-y-1.5">
-          <Label htmlFor="rule-override">AI instructions (optional)</Label>
+          <Label htmlFor="rule-override">{t.rules.aiOverride}</Label>
           <Textarea
             id="rule-override"
             value={form.aiPromptOverride}
             onChange={(e) => set("aiPromptOverride", e.target.value)}
-            placeholder="Extra instructions for the AI when this rule fires, e.g. always mention the current 10% discount."
+            placeholder="دستورالعمل اضافی برای هوش مصنوعی وقتی این قانون فعال می‌شود، مثلاً: همیشه تخفیف ۱۰٪ فعلی را ذکر کن."
             rows={3}
           />
-          <p className="text-xs text-muted-foreground">
-            Merged with your business context in the AI Assistant tab.
-          </p>
+          <p className="text-xs text-muted-foreground">{t.rules.aiOverrideHelp}</p>
         </div>
       )}
 
       {/* Active switch */}
       <div className="flex items-center justify-between rounded-lg border p-3">
         <div className="space-y-0.5">
-          <Label htmlFor="rule-active" className="cursor-pointer">Active</Label>
-          <p className="text-xs text-muted-foreground">Inactive rules never fire.</p>
+          <Label htmlFor="rule-active" className="cursor-pointer">{t.rules.active}</Label>
+          <p className="text-xs text-muted-foreground">قوانین غیرفعال هرگز اجرا نمی‌شوند.</p>
         </div>
         <Switch id="rule-active" checked={form.isActive} onCheckedChange={(v) => set("isActive", v)} />
       </div>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t.common.cancel}
         </Button>
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : editing ? "Save changes" : "Create rule"}
+          {saving ? t.common.sending : editing ? t.common.save : t.common.create}
         </Button>
       </DialogFooter>
     </form>
@@ -905,27 +914,29 @@ function RuleTester({
       });
       setResult(res);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Preview failed");
+      toast.error(e instanceof Error ? e.message : "پیش‌نمایش ناموفق بود");
     } finally {
       setLoading(false);
     }
   }
 
-  const samples = ["Hi, how much is this?", "Do you ship to Tehran?", "What are your working hours?"];
+  const samples = [
+    "سلام، قیمت سرم ویتامین سی چنده؟",
+    "به تهران ارسال دارید؟",
+    "ساعات کاری شما چه زمانی است؟",
+  ];
 
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
       <Card className="overflow-hidden">
         <CollapsibleTrigger asChild>
-          <button className="flex w-full items-center gap-3 px-6 py-4 text-left hover:bg-accent/40 transition-colors">
+          <button className="flex w-full items-center gap-3 px-6 py-4 text-start hover:bg-accent/40 transition-colors">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg ig-gradient-soft text-primary">
               <Wand2 className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold leading-tight">Rule tester</h3>
-              <p className="text-xs text-muted-foreground">
-                Simulate an incoming message and see which rule matches — or how the AI replies.
-              </p>
+              <h3 className="font-semibold leading-tight">{t.rules.tester}</h3>
+              <p className="text-xs text-muted-foreground">{t.rules.testerDesc}</p>
             </div>
             <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", open && "rotate-180")} />
           </button>
@@ -935,7 +946,7 @@ function RuleTester({
             {/* Input row */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-1.5">
-                <Label htmlFor="test-message" className="sr-only">Test message</Label>
+                <Label htmlFor="test-message" className="sr-only">{t.rules.testMessage}</Label>
                 <Input
                   id="test-message"
                   value={message}
@@ -946,12 +957,12 @@ function RuleTester({
                       runTest();
                     }
                   }}
-                  placeholder="Type a customer message…"
+                  placeholder="یک پیام مشتری بنویسید…"
                 />
               </div>
               <div className="flex items-center gap-2">
                 <Select value={channel} onValueChange={(v) => setChannel(v as typeof channel)}>
-                  <SelectTrigger className="w-[140px]" aria-label="Channel">
+                  <SelectTrigger className="w-[140px]" aria-label={t.dashboard.channel}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -968,14 +979,14 @@ function RuleTester({
                   ) : (
                     <Send className="h-4 w-4" />
                   )}
-                  Test
+                  {t.rules.test}
                 </Button>
               </div>
             </div>
 
             {/* Sample chips */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Try:</span>
+              <span className="text-xs text-muted-foreground">امتحان کنید:</span>
               {samples.map((s) => (
                 <button
                   key={s}
@@ -1021,8 +1032,8 @@ function TesterResult({
     return (
       <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-center text-sm text-muted-foreground">
         {hasRules
-          ? "Run a test to see which rule matches and preview the AI reply."
-          : "No rules yet — the AI fallback will handle messages if enabled in the AI Assistant tab."}
+          ? "یک آزمایش اجرا کنید تا ببینید کدام قانون تطابق دارد و پاسخ هوش مصنوعی را پیش‌نمایش کنید."
+          : "هنوز قانونی وجود ندارد — اگر پشتیبان هوش مصنوعی در تب دستیار هوش مصنوعی فعال باشد، پیام‌ها را پاسخ می‌دهد."}
       </div>
     );
   }
@@ -1039,10 +1050,11 @@ function TesterResult({
             <Zap className="h-3.5 w-3.5" />
           </span>
           <span className="font-medium text-emerald-800 dark:text-emerald-200">
-            Matched rule: {matched.name}
+            {t.rules.matched} {matched.name}
           </span>
           {matched.matchedKeywords && matched.matchedKeywords.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="text-xs text-muted-foreground">{t.rules.matchedKeywords}:</span>
               {matched.matchedKeywords.map((k) => (
                 <Badge key={k} variant="secondary" className="font-mono text-[10px]">{k}</Badge>
               ))}
@@ -1056,7 +1068,7 @@ function TesterResult({
             <Bot className="h-3.5 w-3.5" />
           </span>
           <span className="font-medium text-amber-800 dark:text-amber-200">
-            {result.aiFallback ? "No rule matched — AI fallback engaged" : "No rule matched, AI fallback off"}
+            {result.aiFallback ? t.rules.noMatch : "هیچ قانونی تطابق نداشت — پشتیبان هوش مصنوعی خاموش است"}
           </span>
         </div>
       )}
@@ -1066,34 +1078,34 @@ function TesterResult({
         <div className="space-y-2 rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Sparkles className="h-3.5 w-3.5 text-primary" /> AI reply preview
+              <Sparkles className="h-3.5 w-3.5 text-primary" /> {t.rules.reply}
             </span>
             <div className="flex items-center gap-1.5">
-              <Badge variant="secondary" className="text-[10px]">{ai.intent}</Badge>
+              <Badge variant="secondary" className="text-[10px]">{intentLabel(ai.intent)}</Badge>
               {ai.escalate ? (
                 <Badge className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-300 border-transparent">
-                  Escalate
+                  {t.rules.escalate}
                 </Badge>
               ) : (
                 <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-transparent">
-                  Auto-reply
+                  پاسخ خودکار
                 </Badge>
               )}
             </div>
           </div>
-          <div className="flex justify-end">
-            <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-secondary px-3 py-2 text-sm">
-              {message || "Customer message"}
+          <div className="flex flex-col gap-2">
+            {/* Inbound (customer) — appears on the right in RTL */}
+            <div className="self-start max-w-[80%] rounded-2xl rounded-es-sm bg-secondary px-3 py-2 text-sm">
+              {message || t.inbox.customer}
             </div>
-          </div>
-          <div className="flex justify-start">
-            <div className="max-w-[85%] rounded-2xl rounded-bl-sm ig-gradient px-3 py-2 text-sm text-white whitespace-pre-wrap">
+            {/* Outbound (AI) — appears on the left in RTL */}
+            <div className="self-end max-w-[85%] rounded-2xl rounded-ee-sm ig-gradient px-3 py-2 text-sm text-white whitespace-pre-wrap">
               {ai.reply}
             </div>
           </div>
           {ai.suggestedAction && (
             <p className="text-xs text-muted-foreground">
-              <span className="font-medium">Suggested action:</span> {ai.suggestedAction}
+              <span className="font-medium">{t.rules.suggestedAction}:</span> {ai.suggestedAction}
             </p>
           )}
         </div>
@@ -1102,7 +1114,7 @@ function TesterResult({
       {/* Static reply preview (no AI) */}
       {matched && !ai && (
         <p className="text-xs text-muted-foreground">
-          This rule uses a static reply — no AI generation needed.
+          این قانون از پاسخ ثابت استفاده می‌کند — نیازی به تولید هوش مصنوعی نیست.
         </p>
       )}
     </div>
@@ -1119,12 +1131,10 @@ function EmptyRules({ onNew }: { onNew: () => void }) {
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl ig-gradient-soft text-primary">
         <Zap className="h-8 w-8" />
       </div>
-      <h3 className="mt-4 text-lg font-semibold">Create your first automation rule</h3>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-        Rules let ReplyPilot reply instantly to common questions — based on keywords, DMs, comments or story replies. Higher rules take priority.
-      </p>
+      <h3 className="mt-4 text-lg font-semibold">{t.rules.noRules}</h3>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{t.rules.noRulesDesc}</p>
       <Button className="mt-5 ig-gradient text-white hover:opacity-90" onClick={onNew}>
-        <Plus className="h-4 w-4" /> New rule
+        <Plus className="h-4 w-4" /> {t.rules.newRule}
       </Button>
     </div>
   );

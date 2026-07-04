@@ -6,11 +6,12 @@ import { useApi, useApiMutation } from "@/hooks/use-api";
 import { api } from "@/lib/api-client";
 import type { LeadDto } from "@/types";
 import { CHANNELS, LEAD_STATUSES, labelFor } from "@/lib/constants";
-import { timeAgo, fmtDateTime, initials, splitTags } from "@/lib/format";
+import { faTimeAgo, faDateTime, initials, splitTags } from "@/lib/format";
+import { t, toFa } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -69,16 +70,16 @@ function leadStatusColor(status: string): string {
 }
 
 function sourceMeta(source: string): { label: string; Icon: typeof MessageSquare } {
-  if (source === "comment") return { label: "Comment", Icon: MessageCircle };
-  if (source === "story") return { label: "Story", Icon: Instagram };
-  return { label: "DM", Icon: MessageSquare };
+  if (source === "comment") return { label: t.channels.comment, Icon: MessageCircle };
+  if (source === "story") return { label: t.channels.story, Icon: Instagram };
+  return { label: t.channels.dm, Icon: MessageSquare };
 }
 
 function GradientAvatar({ name, size = "h-8 w-8" }: { name: string; size?: string }) {
   return (
     <Avatar className={size}>
       <AvatarFallback className="ig-gradient text-white text-[10px] font-semibold">
-        {initials(name) || "?"}
+        {initials(name) || "؟"}
       </AvatarFallback>
     </Avatar>
   );
@@ -90,7 +91,7 @@ function ConnectAccountCta() {
       const { url } = await api.get<{ url: string }>("/api/instagram/oauth/start");
       window.location.href = url;
     } catch {
-      toast.error("Could not start Instagram connection");
+      toast.error("شروع اتصال به اینستاگرام ناموفق بود");
     }
   }
   return (
@@ -99,13 +100,13 @@ function ConnectAccountCta() {
         <Instagram className="h-10 w-10 text-primary" />
       </div>
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Connect an Instagram account</h3>
+        <h3 className="text-lg font-semibold">یک حساب اینستاگرام متصل کنید</h3>
         <p className="text-sm text-muted-foreground max-w-sm">
-          Connect a business Instagram account to start capturing leads from your DMs, comments, and story replies.
+          برای ثبت سرنخ از دایرکت، کامنت و ریپلای استوری، یک حساب کسب‌وکار اینستاگرام متصل کنید.
         </p>
       </div>
       <Button onClick={connect} className="ig-gradient text-white">
-        <Plus className="h-4 w-4" /> Connect Instagram
+        <Plus className="h-4 w-4" /> {t.settings.connectInstagram}
       </Button>
     </div>
   );
@@ -120,7 +121,7 @@ function StatusChips({
   active: string;
   onSelect: (s: string) => void;
 }) {
-  const chips = [{ value: "all", label: "All", color: "bg-secondary text-secondary-foreground" }, ...LEAD_STATUSES];
+  const chips = [{ value: "all", label: t.common.all, color: "bg-secondary text-secondary-foreground" }, ...LEAD_STATUSES];
   return (
     <div className="flex flex-wrap gap-2">
       {chips.map((s) => {
@@ -142,7 +143,7 @@ function StatusChips({
               )}
             />
             {s.label}
-            <span className="ml-0.5 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">{count}</span>
+            <span className="ms-0.5 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">{toFa(count)}</span>
           </button>
         );
       })}
@@ -181,31 +182,33 @@ function LeadForm({
     <div className="space-y-4">
       {showContactId && (
         <div className="space-y-1.5">
-          <Label htmlFor="lead-igid">Instagram contact ID *</Label>
+          <Label htmlFor="lead-igid">{t.leads.contactId} *</Label>
           <Input
             id="lead-igid"
             value={state.contactIgId}
             onChange={(e) => setState({ ...state, contactIgId: e.target.value })}
-            placeholder="e.g. 17841400000000001"
+            placeholder="مثلاً ۱۷۸۴۱۴۰۰۰۰۰۰۰۰۰۰۱"
+            dir="ltr"
             required
           />
           <p className="text-[11px] text-muted-foreground">
-            The unique Instagram-scoped ID of the contact. Required.
+            شناسه یکتای اینستاگرامی تماس. الزامی است.
           </p>
         </div>
       )}
       <div className="space-y-1.5">
-        <Label htmlFor="lead-username">Contact @username</Label>
+        <Label htmlFor="lead-username">{t.leads.contactUsername}</Label>
         <Input
           id="lead-username"
           value={state.contactUsername}
           onChange={(e) => setState({ ...state, contactUsername: e.target.value })}
-          placeholder="e.g. jane.doe"
+          placeholder="مثلاً jane.doe"
+          dir="ltr"
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="lead-status">Status</Label>
+          <Label htmlFor="lead-status">{t.leads.status}</Label>
           <Select value={state.status} onValueChange={(v) => setState({ ...state, status: v as LeadStatus })}>
             <SelectTrigger id="lead-status">
               <SelectValue />
@@ -220,7 +223,7 @@ function LeadForm({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="lead-source">Source</Label>
+          <Label htmlFor="lead-source">{t.leads.source}</Label>
           <Select value={state.source} onValueChange={(v) => setState({ ...state, source: v as LeadFormState["source"] })}>
             <SelectTrigger id="lead-source">
               <SelectValue />
@@ -236,22 +239,23 @@ function LeadForm({
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="lead-tags">Tags</Label>
+        <Label htmlFor="lead-tags">{t.leads.tags}</Label>
         <Input
           id="lead-tags"
           value={state.tags}
           onChange={(e) => setState({ ...state, tags: e.target.value })}
-          placeholder="comma, separated, tags"
+          placeholder={t.leads.tagsHelp}
+          dir="ltr"
         />
-        <p className="text-[11px] text-muted-foreground">Separate tags with commas.</p>
+        <p className="text-[11px] text-muted-foreground">{t.leads.tagsHelp}</p>
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="lead-notes">Notes</Label>
+        <Label htmlFor="lead-notes">{t.leads.notes}</Label>
         <Textarea
           id="lead-notes"
           value={state.notes}
           onChange={(e) => setState({ ...state, notes: e.target.value })}
-          placeholder="Add context about this lead…"
+          placeholder="یادداشت‌های خود را درباره این سرنخ بنویسید…"
           className="min-h-[80px]"
         />
       </div>
@@ -272,8 +276,8 @@ export function LeadsView() {
   const [editForm, setEditForm] = useState<LeadFormState>(EMPTY_FORM);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q), 300);
-    return () => clearTimeout(t);
+    const id = setTimeout(() => setDebouncedQ(q), 300);
+    return () => clearTimeout(id);
   }, [q]);
 
   const listUrl = useMemo(() => {
@@ -290,7 +294,6 @@ export function LeadsView() {
   );
   const leads = leadsData?.leads ?? [];
 
-  // status counts — based on full set (no status filter) for chip totals
   const { data: allData } = useApi<{ leads: LeadDto[] }>(
     ["leads-all", selectedAccountId],
     selectedAccountId ? `/api/leads` : null,
@@ -336,18 +339,18 @@ export function LeadsView() {
 
   function submitAdd() {
     if (!addForm.contactIgId.trim()) {
-      toast.error("Contact ID is required");
+      toast.error(t.leads.contactId + " الزامی است");
       return;
     }
     createMut.mutate(
       { ...addForm, igAccountId: selectedAccountId || undefined },
       {
         onSuccess: () => {
-          toast.success("Lead added");
+          toast.success(t.leads.saved);
           setAddOpen(false);
           setAddForm(EMPTY_FORM);
         },
-        onError: (e) => toast.error(e.message || "Failed to add lead"),
+        onError: (e) => toast.error(e.message || "افزودن سرنخ ناموفق بود"),
       },
     );
   }
@@ -364,10 +367,10 @@ export function LeadsView() {
       },
       {
         onSuccess: () => {
-          toast.success("Lead updated");
+          toast.success(t.leads.updated);
           setEditing(null);
         },
-        onError: (e) => toast.error(e.message || "Failed to update lead"),
+        onError: (e) => toast.error(e.message || "به‌روزرسانی سرنخ ناموفق بود"),
       },
     );
   }
@@ -378,10 +381,10 @@ export function LeadsView() {
       { id: deleting.id },
       {
         onSuccess: () => {
-          toast.success("Lead deleted");
+          toast.success(t.leads.deleted);
           setDeleting(null);
         },
-        onError: (e) => toast.error(e.message || "Failed to delete lead"),
+        onError: (e) => toast.error(e.message || "حذف سرنخ ناموفق بود"),
       },
     );
   }
@@ -401,10 +404,8 @@ export function LeadsView() {
       {/* Page header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Leads</h1>
-          <p className="text-sm text-muted-foreground">
-            Capture, qualify, and track potential customers from Instagram conversations.
-          </p>
+          <h1 className="text-xl font-semibold tracking-tight">{t.leads.title}</h1>
+          <p className="text-sm text-muted-foreground">{t.leads.subtitle}</p>
         </div>
       </div>
 
@@ -415,21 +416,21 @@ export function LeadsView() {
       <Card>
         <CardContent className="flex flex-col gap-3 md:flex-row md:items-center p-4">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute start-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search by @username or tags…"
-              className="pl-8"
-              aria-label="Search leads"
+              placeholder={t.leads.search}
+              className="ps-8"
+              aria-label={t.leads.search}
             />
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => window.open("/api/leads/export", "_blank")}>
-              <Download className="h-4 w-4" /> Export CSV
+              <Download className="h-4 w-4" /> {t.leads.exportCsv}
             </Button>
             <Button onClick={openAdd} className="ig-gradient text-white">
-              <Plus className="h-4 w-4" /> Add lead
+              <Plus className="h-4 w-4" /> {t.leads.addLead}
             </Button>
           </div>
         </CardContent>
@@ -440,13 +441,13 @@ export function LeadsView() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Contact</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Tags</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Notes</TableHead>
-              <TableHead>Added</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t.leads.contact}</TableHead>
+              <TableHead>{t.leads.status}</TableHead>
+              <TableHead>{t.leads.tags}</TableHead>
+              <TableHead>{t.leads.source}</TableHead>
+              <TableHead>{t.leads.notes}</TableHead>
+              <TableHead>{t.leads.added}</TableHead>
+              <TableHead className="text-end">{t.leads.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -461,7 +462,7 @@ export function LeadsView() {
             ) : leads.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-12 text-sm text-muted-foreground">
-                  No leads yet — they appear when conversations get escalated or hit pricing/order intents.
+                  {t.leads.noLeadsDesc}
                 </TableCell>
               </TableRow>
             ) : (
@@ -473,10 +474,10 @@ export function LeadsView() {
                       <div className="flex items-center gap-2">
                         <GradientAvatar name={l.contactUsername || l.contactIgId} />
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-medium">
-                            @{l.contactUsername || "unknown"}
+                          <div dir="ltr" className="truncate text-sm font-medium">
+                            @{l.contactUsername || "ناشناس"}
                           </div>
-                          <div className="truncate text-[10px] text-muted-foreground">
+                          <div dir="ltr" className="truncate text-[10px] text-muted-foreground">
                             {l.igUsername ? `via @${l.igUsername}` : l.contactIgId}
                           </div>
                         </div>
@@ -492,13 +493,13 @@ export function LeadsView() {
                         {splitTags(l.tags).length === 0 ? (
                           <span className="text-xs text-muted-foreground">—</span>
                         ) : (
-                          splitTags(l.tags).slice(0, 3).map((t) => (
-                            <Badge key={t} variant="outline" className="text-[10px] font-normal">{t}</Badge>
+                          splitTags(l.tags).slice(0, 3).map((tag) => (
+                            <Badge key={tag} variant="outline" className="text-[10px] font-normal">{tag}</Badge>
                           ))
                         )}
                         {splitTags(l.tags).length > 3 && (
                           <Badge variant="outline" className="text-[10px] font-normal">
-                            +{splitTags(l.tags).length - 3}
+                            +{toFa(splitTags(l.tags).length - 3)}
                           </Badge>
                         )}
                       </div>
@@ -514,18 +515,18 @@ export function LeadsView() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-xs text-muted-foreground" title={fmtDateTime(l.createdAt)}>
-                        {timeAgo(l.createdAt)}
+                      <span className="text-xs text-muted-foreground" title={faDateTime(l.createdAt)}>
+                        {faTimeAgo(l.createdAt)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => openEdit(l)}
-                          aria-label="Edit lead"
+                          aria-label={t.leads.editLead}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -534,7 +535,7 @@ export function LeadsView() {
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
                           onClick={() => setDeleting(l)}
-                          aria-label="Delete lead"
+                          aria-label={t.common.delete}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -556,7 +557,7 @@ export function LeadsView() {
           <Card>
             <CardContent className="py-10 text-center text-sm text-muted-foreground">
               <Users className="mx-auto mb-2 h-8 w-8 opacity-40" />
-              No leads yet — they appear when conversations get escalated or hit pricing/order intents.
+              {t.leads.noLeadsDesc}
             </CardContent>
           </Card>
         ) : (
@@ -569,11 +570,11 @@ export function LeadsView() {
                     <div className="flex items-center gap-2">
                       <GradientAvatar name={l.contactUsername || l.contactIgId} />
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">
-                          @{l.contactUsername || "unknown"}
+                        <div dir="ltr" className="truncate text-sm font-medium">
+                          @{l.contactUsername || "ناشناس"}
                         </div>
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <Icon className="h-2.5 w-2.5" /> {label} · {timeAgo(l.createdAt)}
+                          <Icon className="h-2.5 w-2.5" /> {label} · {faTimeAgo(l.createdAt)}
                         </div>
                       </div>
                     </div>
@@ -583,8 +584,8 @@ export function LeadsView() {
                   </div>
                   {splitTags(l.tags).length > 0 && (
                     <div className="flex flex-wrap gap-1">
-                      {splitTags(l.tags).map((t) => (
-                        <Badge key={t} variant="outline" className="text-[10px] font-normal">{t}</Badge>
+                      {splitTags(l.tags).map((tag) => (
+                        <Badge key={tag} variant="outline" className="text-[10px] font-normal">{tag}</Badge>
                       ))}
                     </div>
                   )}
@@ -593,7 +594,7 @@ export function LeadsView() {
                   )}
                   <div className="flex justify-end gap-1 pt-1 border-t">
                     <Button variant="ghost" size="sm" onClick={() => openEdit(l)}>
-                      <Pencil className="h-3.5 w-3.5" /> Edit
+                      <Pencil className="h-3.5 w-3.5" /> {t.common.edit}
                     </Button>
                     <Button
                       variant="ghost"
@@ -601,7 +602,7 @@ export function LeadsView() {
                       className="text-destructive hover:text-destructive"
                       onClick={() => setDeleting(l)}
                     >
-                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                      <Trash2 className="h-3.5 w-3.5" /> {t.common.delete}
                     </Button>
                   </div>
                 </CardContent>
@@ -615,16 +616,16 @@ export function LeadsView() {
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add a lead</DialogTitle>
+            <DialogTitle>{t.leads.addLeadTitle}</DialogTitle>
             <DialogDescription>
-              Manually add a contact as a lead. They&apos;ll show up in your CRM.
+              یک تماس را به‌صورت دستی به‌عنوان سرنخ اضافه کنید. در CRM شما نمایش داده می‌شود.
             </DialogDescription>
           </DialogHeader>
           <LeadForm state={addForm} setState={setAddForm} showContactId />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>{t.common.cancel}</Button>
             <Button onClick={submitAdd} disabled={createMut.isPending} className="ig-gradient text-white">
-              {createMut.isPending ? "Adding…" : "Add lead"}
+              {createMut.isPending ? t.common.sending : t.leads.addLead}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -634,22 +635,22 @@ export function LeadsView() {
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit lead</DialogTitle>
+            <DialogTitle>{t.leads.editLead}</DialogTitle>
             <DialogDescription>
-              Update status, tags, and notes for this contact.
+              وضعیت، برچسب‌ها و یادداشت‌های این تماس را به‌روزرسانی کنید.
             </DialogDescription>
           </DialogHeader>
           {editing && (
             <div className="space-y-1 pb-2">
-              <div className="text-xs text-muted-foreground">Contact</div>
-              <div className="text-sm font-medium">@{editing.contactUsername || editing.contactIgId}</div>
+              <div className="text-xs text-muted-foreground">{t.leads.contact}</div>
+              <div dir="ltr" className="text-sm font-medium">@{editing.contactUsername || editing.contactIgId}</div>
             </div>
           )}
           <LeadForm state={editForm} setState={setEditForm} showContactId={false} />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditing(null)}>{t.common.cancel}</Button>
             <Button onClick={submitEdit} disabled={updateMut.isPending} className="ig-gradient text-white">
-              {updateMut.isPending ? "Saving…" : "Save changes"}
+              {updateMut.isPending ? t.common.sending : t.common.save}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -659,22 +660,22 @@ export function LeadsView() {
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this lead?</AlertDialogTitle>
+            <AlertDialogTitle>{t.leads.deleteConfirm}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove{" "}
-              <span className="font-medium text-foreground">
+              این کار{" "}
+              <span dir="ltr" className="font-medium text-foreground">
                 @{deleting?.contactUsername || deleting?.contactIgId}
               </span>{" "}
-              from your CRM. This action cannot be undone.
+              را به‌طور دائمی از CRM شما حذف می‌کند. این عمل قابل بازگشت نیست.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
-              {deleteMut.isPending ? "Deleting…" : "Delete lead"}
+              {deleteMut.isPending ? t.common.sending : t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
