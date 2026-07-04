@@ -146,32 +146,30 @@ function StatCard({
 }: StatCardProps) {
   const s = ACCENT_STYLES[accent];
   return (
-    <Card className="py-0">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-[11px] font-medium tracking-wide text-muted-foreground">
-              {label}
+    <Card className="py-0 h-full flex flex-col">
+      <CardContent className="p-4 flex-1 flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-medium tracking-wide text-muted-foreground line-clamp-1">
+            {label}
+          </div>
+          {loading ? (
+            <Skeleton className="mt-2 h-7 w-16" />
+          ) : (
+            <div
+              dir="ltr"
+              className="mt-1 truncate text-2xl font-bold tracking-tight"
+            >
+              {value}
             </div>
-            {loading ? (
-              <Skeleton className="mt-2 h-7 w-16" />
-            ) : (
-              <div
-                dir="ltr"
-                className="mt-1 truncate text-2xl font-bold tracking-tight"
-              >
-                {value}
-              </div>
-            )}
-          </div>
-          <div
-            className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-              s.iconBg,
-            )}
-          >
-            <Icon className={cn("h-4 w-4", s.iconColor)} />
-          </div>
+          )}
+        </div>
+        <div
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+            s.iconBg,
+          )}
+        >
+          <Icon className={cn("h-4 w-4", s.iconColor)} />
         </div>
       </CardContent>
     </Card>

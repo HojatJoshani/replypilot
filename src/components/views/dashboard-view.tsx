@@ -182,11 +182,11 @@ function KpiCard({
 }: KpiCardProps) {
   const s = ACCENT_STYLES[accent];
   return (
-    <Card className="overflow-hidden py-0">
-      <CardContent className="p-4">
+    <Card className="overflow-hidden py-0 h-full flex flex-col">
+      <CardContent className="p-4 flex-1 flex flex-col justify-between">
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-[11px] font-medium tracking-wide text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] font-medium tracking-wide text-muted-foreground line-clamp-1">
               {label}
             </div>
             {loading ? (
@@ -199,11 +199,6 @@ function KpiCard({
                 {value}
               </div>
             )}
-            {hint && !loading && (
-              <div className="mt-1 truncate text-[11px] text-muted-foreground">
-                {hint}
-              </div>
-            )}
           </div>
           <div
             className={cn(
@@ -214,8 +209,13 @@ function KpiCard({
             <Icon className={cn("h-4 w-4", s.iconColor)} />
           </div>
         </div>
+        {hint && !loading && (
+          <div className="mt-2 truncate text-[11px] text-muted-foreground">
+            {hint}
+          </div>
+        )}
       </CardContent>
-      <div className={cn("h-1 w-full", s.bar)} aria-hidden />
+      <div className={cn("h-1 w-full shrink-0", s.bar)} aria-hidden />
     </Card>
   );
 }
