@@ -96,13 +96,16 @@ model AutomationRule {
   tenantId         String
   igAccountId      String
   name             String
-  triggerType      String // keyword | any_dm | any_comment | story_reply
+  triggerType      String // keyword | any_dm | any_comment | story_reply | template
   triggerKeywords  String // comma-separated (lowercased)
   triggerMatchMode String   @default("any") // any | all
   responseType     String // static_text | static_media | ai_generated
   staticResponse   String?
   mediaUrl         String?
   aiPromptOverride String?
+  // Advanced conditions & multi-actions (JSON strings, nullable for backward compat)
+  conditionsJson   String? // [{type, operator, value}] — extra filters
+  actionsJson      String? // [{type, value}] — multiple actions to execute
   isActive         Boolean  @default(true)
   priority         Int      @default(0)
   createdAt        DateTime @default(now())

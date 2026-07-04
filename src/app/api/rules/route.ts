@@ -13,6 +13,8 @@ const createSchema = z.object({
   staticResponse: z.string().nullable().default(null),
   mediaUrl: z.string().nullable().default(null),
   aiPromptOverride: z.string().nullable().default(null),
+  conditionsJson: z.string().nullable().default(null),
+  actionsJson: z.string().nullable().default(null),
   isActive: z.boolean().default(true),
 });
 
@@ -68,6 +70,8 @@ export async function POST(req: Request) {
       staticResponse: d.staticResponse,
       mediaUrl: d.mediaUrl,
       aiPromptOverride: d.aiPromptOverride,
+      conditionsJson: d.conditionsJson,
+      actionsJson: d.actionsJson,
       isActive: d.isActive,
       priority,
     },

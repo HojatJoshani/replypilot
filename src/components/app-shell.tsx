@@ -1,10 +1,11 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
 import { LoginScreen } from "@/components/login-screen";
+import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { useAppStore } from "@/lib/store";
 import { DashboardView } from "@/components/views/dashboard-view";
 import { InboxView } from "@/components/views/inbox-view";
@@ -16,12 +17,13 @@ import { BillingView } from "@/components/views/billing-view";
 import { SettingsView } from "@/components/views/settings-view";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import type { InstagramAccountDto } from "@/types";
+import type { InstagramAccountDto, AutomationRuleDto } from "@/types";
 import { t } from "@/lib/i18n";
 
 export function AppShell() {
   const { data: session, status } = useSession();
   const { view, selectedAccountId, setSelectedAccountId } = useAppStore();
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
 
   // Load accounts once authenticated; default the selected account.
   const { data: accountsData, isLoading: accountsLoading } = useQuery<{ accounts: InstagramAccountDto[] }>({
@@ -34,6 +36,21 @@ export function AppShell() {
       setSelectedAccountId(accountsData.accounts[0].id);
     }
   }, [accountsData, selectedAccountId, setSelectedAccountId]);
+
+  // Check if this tenant has any rules — if not, offer the onboarding wizard.
+  const { data: rulesData } = useQuery<{ rules: AutomationRuleDto[] }>({
+    queryKey: ["rules-onboarding", selectedAccountId],
+    queryFn: () => api.get(`/api/rules?igAccountId=${selectedAccountId}`),
+    enabled: status === "authenticated" && !!selectedAccountId && !onboardingDismissed,
+  });
+
+  // Show onboarding wizard when: authenticated, has account, has NO rules.
+  // Pure derived state — no setState-in-effect needed.
+  const hasNoRules = !!rulesData && rulesData.rules.length === 0;
+  const onboardingSeen = typeof window !== "undefined" && selectedAccountId
+    ? !!localStorage.getItem(`onboarding-seen-${selectedAccountId}`)
+    : false;
+  const showOnboarding = hasNoRules && !onboardingDismissed && !onboardingSeen;
 
   if (status === "loading") {
     return (
@@ -61,24 +78,40 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <AppSidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <AppTopbar />
-        <main className="flex-1 overflow-y-auto scrollbar-thin">
-          {view === "dashboard" && <DashboardView />}
-          {view === "inbox" && <InboxView />}
-          {view === "rules" && <RulesView />}
-          {view === "ai-config" && <AiConfigView />}
-          {view === "leads" && <LeadsView />}
-          {view === "analytics" && <AnalyticsView />}
-          {view === "billing" && <BillingView />}
-          {view === "settings" && <SettingsView />}
-        </main>
-        <footer className="mt-auto border-t bg-background/80 px-4 py-3 text-center text-xs text-muted-foreground backdrop-blur">
-          {t.demo.footer}
-        </footer>
+    <>
+      <div className="min-h-screen flex bg-background">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <AppTopbar />
+          <main className="flex-1 overflow-y-auto scrollbar-thin">
+            {view === "dashboard" && <DashboardView />}
+            {view === "inbox" && <InboxView />}
+            {view === "rules" && <RulesView />}
+            {view === "ai-config" && <AiConfigView />}
+            {view === "leads" && <LeadsView />}
+            {view === "analytics" && <AnalyticsView />}
+            {view === "billing" && <BillingView />}
+            {view === "settings" && <SettingsView />}
+          </main>
+          <footer className="mt-auto border-t bg-background/80 px-4 py-3 text-center text-xs text-muted-foreground backdrop-blur">
+            {t.demo.footer}
+          </footer>
+        </div>
       </div>
-    </div>
+      {showOnboarding && selectedAccountId && (
+        <OnboardingWizard
+          igAccountId={selectedAccountId}
+          onComplete={() => {
+            setOnboardingDismissed(true);
+            if (selectedAccountId) localStorage.setItem(`onboarding-seen-${selectedAccountId}`, "1");
+            useAppStore.getState().setView("dashboard");
+          }}
+          onSkip={() => {
+            setOnboardingDismissed(true);
+            if (selectedAccountId) localStorage.setItem(`onboarding-seen-${selectedAccountId}`, "1");
+          }}
+        />
+      )}
+    </>
   );
 }

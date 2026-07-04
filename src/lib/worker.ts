@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { matchRule } from "./rule-engine";
+import { matchRule, getRuleActions } from "./rule-engine";
 import { aiConfigToContext, generateAiReply } from "./ai";
 import { sendDirectMessage, replyToComment } from "./instagram";
 import { env } from "./env";
@@ -136,11 +136,16 @@ export async function processWebhookEvent(eventId: string): Promise<void> {
 async function handleParsedEvent(evt: ParsedEvent, webhookEventId: string) {
   const account = await resolveAccount(evt.igAccountId);
   if (!account) {
-    // Unknown account — log and skip (could be a different tenant's account).
     console.warn("[worker] no account for igUserId", evt.igAccountId);
     return;
   }
   const tenantId = account.tenantId;
+
+  // Check if this is the first message from this contact (for contact_type condition)
+  const priorCount = await db.conversationLog.count({
+    where: { igAccountId: account.id, contactIgId: evt.contactIgId },
+  });
+  const isFirstMessage = priorCount === 0;
 
   // Load active rules ordered by priority desc, then createdAt asc.
   const rules = await db.automationRule.findMany({
@@ -148,32 +153,79 @@ async function handleParsedEvent(evt: ParsedEvent, webhookEventId: string) {
     orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
   });
 
-  const matched = matchRule({ message: evt.message, channel: evt.channel }, rules);
+  const matched = matchRule(
+    { message: evt.message, channel: evt.channel, contactIgId: evt.contactIgId, isFirstMessage },
+    rules,
+  );
 
   let outbound: string | null = null;
   let wasAi = false;
   let escalated = false;
+  let resolved = false;
   let intent: string | null = null;
   let suggestedAction: string | null = null;
   let matchedRuleId: string | null = matched?.rule.id ?? null;
   let aiModel: string | null = null;
+  let leadTags: string[] = [];
 
-  if (matched && matched.rule.responseType === "static_text") {
-    outbound = matched.rule.staticResponse || "";
-  } else if (matched && matched.rule.responseType === "static_media") {
-    outbound = matched.rule.mediaUrl ? `[media] ${matched.rule.mediaUrl}` : "";
-  } else if (matched && matched.rule.responseType === "ai_generated") {
-    wasAi = true;
-    aiModel = "z-ai-glm";
-    const ctx = account.aiConfig
-      ? aiConfigToContext(account.aiConfig, evt.channel, evt.contactUsername)
-      : { channel: evt.channel, contactUsername: evt.contactUsername, tone: "friendly", businessName: account.igUsername };
-    if (matched.rule.aiPromptOverride) ctx.aiPromptOverride = matched.rule.aiPromptOverride;
-    const res = await generateAiReply(ctx, evt.message);
-    outbound = res.reply.reply;
-    intent = res.reply.intent;
-    escalated = res.reply.escalate;
-    suggestedAction = res.reply.suggestedAction;
+  // Execute actions from the matched rule (multi-action support)
+  if (matched) {
+    const actions = getRuleActions(matched.rule);
+    for (const action of actions) {
+      switch (action.type) {
+        case "reply_text":
+          outbound = action.value;
+          break;
+        case "reply_media":
+          outbound = action.value ? `[media] ${action.value}` : outbound;
+          break;
+        case "ai_reply": {
+          wasAi = true;
+          aiModel = "z-ai-glm";
+          const ctx = account.aiConfig
+            ? aiConfigToContext(account.aiConfig, evt.channel, evt.contactUsername)
+            : { channel: evt.channel, contactUsername: evt.contactUsername, tone: "friendly", businessName: account.igUsername };
+          if (action.value) ctx.aiPromptOverride = action.value;
+          else if (matched.rule.aiPromptOverride) ctx.aiPromptOverride = matched.rule.aiPromptOverride;
+          const res = await generateAiReply(ctx, evt.message);
+          outbound = res.reply.reply;
+          intent = res.reply.intent;
+          if (res.reply.escalate) escalated = true;
+          suggestedAction = res.reply.suggestedAction;
+          break;
+        }
+        case "tag_lead":
+          leadTags.push(action.value || "auto");
+          break;
+        case "escalate":
+          escalated = true;
+          if (action.value && !suggestedAction) suggestedAction = action.value;
+          break;
+        case "resolve":
+          resolved = true;
+          break;
+      }
+    }
+    // Backward compat: if no actions but legacy fields exist, use them
+    if (actions.length === 0) {
+      if (matched.rule.responseType === "static_text") {
+        outbound = matched.rule.staticResponse || "";
+      } else if (matched.rule.responseType === "static_media") {
+        outbound = matched.rule.mediaUrl ? `[media] ${matched.rule.mediaUrl}` : "";
+      } else if (matched.rule.responseType === "ai_generated") {
+        wasAi = true;
+        aiModel = "z-ai-glm";
+        const ctx = account.aiConfig
+          ? aiConfigToContext(account.aiConfig, evt.channel, evt.contactUsername)
+          : { channel: evt.channel, contactUsername: evt.contactUsername, tone: "friendly", businessName: account.igUsername };
+        if (matched.rule.aiPromptOverride) ctx.aiPromptOverride = matched.rule.aiPromptOverride;
+        const res = await generateAiReply(ctx, evt.message);
+        outbound = res.reply.reply;
+        intent = res.reply.intent;
+        if (res.reply.escalate) escalated = true;
+        suggestedAction = res.reply.suggestedAction;
+      }
+    }
   } else if (!matched && account.aiConfig?.aiFallbackEnabled) {
     wasAi = true;
     aiModel = "z-ai-glm";
@@ -181,15 +233,14 @@ async function handleParsedEvent(evt: ParsedEvent, webhookEventId: string) {
     const res = await generateAiReply(ctx, evt.message);
     outbound = res.reply.reply;
     intent = res.reply.intent;
-    escalated = res.reply.escalate;
+    if (res.reply.escalate) escalated = true;
     suggestedAction = res.reply.suggestedAction;
   } else {
-    // No rule and no AI fallback — flag for human.
     escalated = true;
     outbound = null;
   }
 
-  // Send the reply (respecting messaging window — caller ensures recency).
+  // Send the reply
   let sendError: string | null = null;
   if (outbound) {
     try {
@@ -208,6 +259,7 @@ async function handleParsedEvent(evt: ParsedEvent, webhookEventId: string) {
     }
   }
 
+  const status = sendError ? "failed" : resolved ? "resolved" : escalated ? "escalated" : "auto";
   const convo = await db.conversationLog.create({
     data: {
       tenantId,
@@ -222,7 +274,7 @@ async function handleParsedEvent(evt: ParsedEvent, webhookEventId: string) {
       escalated,
       intent,
       suggestedAction,
-      status: sendError ? "failed" : escalated ? "escalated" : "auto",
+      status,
       postPermalink: evt.postPermalink,
       aiModel,
     },
@@ -233,9 +285,9 @@ async function handleParsedEvent(evt: ParsedEvent, webhookEventId: string) {
     data: { lastEventAt: new Date() },
   });
 
-  // Lead capture on escalation or pricing/order intents.
-  if (escalated || intent === "pricing" || intent === "order_status") {
-    await upsertLead(tenantId, account.id, evt, convo.id, intent);
+  // Lead capture on escalation, pricing/order intents, or explicit tag_lead actions.
+  if (leadTags.length > 0 || escalated || intent === "pricing" || intent === "order_status") {
+    await upsertLead(tenantId, account.id, evt, convo.id, intent, leadTags);
   }
 
   console.log(
@@ -249,11 +301,12 @@ async function upsertLead(
   evt: ParsedEvent,
   convoId: string,
   intent: string | null,
+  extraTags: string[] = [],
 ) {
   const existing = await db.lead.findFirst({
     where: { tenantId, contactIgId: evt.contactIgId },
   });
-  const tags = [intent, evt.channel].filter(Boolean).join(",");
+  const tags = [intent, evt.channel, ...extraTags].filter(Boolean).join(",");
   if (existing) {
     await db.lead.update({
       where: { id: existing.id },

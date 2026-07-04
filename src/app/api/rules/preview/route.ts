@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
-import { matchRule } from "@/lib/rule-engine";
+import { matchRule, getRuleActions, getRuleConditions } from "@/lib/rule-engine";
 import { generateAiReply, aiConfigToContext } from "@/lib/ai";
 import { z } from "zod";
 
 // Preview what would happen for a given test message: which rule matches
-// (if any), and — when the matched rule is AI-generated (or no match with
-// fallback) — generate a live AI reply so users can test their config.
+// (if any), which conditions/actions apply, and — when AI is involved — a live AI reply.
 const schema = z.object({
   igAccountId: z.string().min(1),
   message: z.string().min(1).max(2000),
   channel: z.enum(["dm", "comment", "story"]).default("dm"),
+  isFirstMessage: z.boolean().optional().default(false),
 });
 
 export async function POST(req: Request) {
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid" }, { status: 400 });
   }
-  const { igAccountId, message, channel } = parsed.data;
+  const { igAccountId, message, channel, isFirstMessage } = parsed.data;
 
   const acc = await db.instagramAccount.findFirst({
     where: { id: igAccountId, tenantId: ctx.tenantId },
@@ -35,22 +35,39 @@ export async function POST(req: Request) {
     orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
   });
 
-  const matched = matchRule({ message, channel }, rules);
+  const matched = matchRule({ message, channel, isFirstMessage }, rules);
 
   let aiPreview: { reply: string; intent: string; escalate: boolean; suggestedAction: string } | null = null;
-  const useAi = matched?.rule.responseType === "ai_generated" || (!matched && acc.aiConfig?.aiFallbackEnabled);
+  const useAi = matched?.rule.responseType === "ai_generated"
+    || (matched && getRuleActions(matched.rule).some(a => a.type === "ai_reply"))
+    || (!matched && acc.aiConfig?.aiFallbackEnabled);
+
   if (useAi) {
     const ctxInput = acc.aiConfig
       ? aiConfigToContext(acc.aiConfig, channel)
       : { channel, tone: "friendly", businessName: acc.igUsername };
-    if (matched?.rule.aiPromptOverride) ctxInput.aiPromptOverride = matched.rule.aiPromptOverride;
+    const actions = matched ? getRuleActions(matched.rule) : [];
+    const aiAction = actions.find(a => a.type === "ai_reply");
+    if (aiAction?.value) ctxInput.aiPromptOverride = aiAction.value;
+    else if (matched?.rule.aiPromptOverride) ctxInput.aiPromptOverride = matched.rule.aiPromptOverride;
     const res = await generateAiReply(ctxInput, message);
     aiPreview = res.reply;
   }
 
+  // Collect action summaries for display
+  const actions = matched ? getRuleActions(matched.rule) : [];
+  const conditions = matched ? getRuleConditions(matched.rule) : [];
+
   return NextResponse.json({
     matchedRule: matched
-      ? { id: matched.rule.id, name: matched.rule.name, responseType: matched.rule.responseType, matchedKeywords: matched.matchedKeywords }
+      ? {
+          id: matched.rule.id,
+          name: matched.rule.name,
+          responseType: matched.rule.responseType,
+          matchedKeywords: matched.matchedKeywords,
+          conditions: conditions.map(c => ({ type: c.type, operator: c.operator, value: c.value })),
+          actions: actions.map(a => ({ type: a.type, value: a.value })),
+        }
       : null,
     aiFallback: !matched && acc.aiConfig?.aiFallbackEnabled,
     aiPreview,

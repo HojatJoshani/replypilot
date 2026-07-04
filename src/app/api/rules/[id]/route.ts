@@ -12,6 +12,8 @@ const updateSchema = z.object({
   staticResponse: z.string().nullable().optional(),
   mediaUrl: z.string().nullable().optional(),
   aiPromptOverride: z.string().nullable().optional(),
+  conditionsJson: z.string().nullable().optional(),
+  actionsJson: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   priority: z.number().int().optional(),
 });

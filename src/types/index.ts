@@ -35,6 +35,8 @@ export interface AutomationRuleDto {
   staticResponse: string | null;
   mediaUrl: string | null;
   aiPromptOverride: string | null;
+  conditionsJson: string | null;
+  actionsJson: string | null;
   isActive: boolean;
   priority: number;
   createdAt: string;
