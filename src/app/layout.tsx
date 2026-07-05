@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   keywords: ["خودکارسازی اینستاگرام", "ربات دایرکت", "هوش مصنوعی", "آریا"],
   authors: [{ name: "هوش مصنوعی آریا" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/favicon.png",
+    apple: "/favicon.png",
   },
   openGraph: {
     title: "آریا — خودکارسازی اینستاگرام",

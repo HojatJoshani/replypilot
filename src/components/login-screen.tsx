@@ -75,7 +75,7 @@ export function LoginScreen() {
         <div className="absolute top-20 left-20 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute bottom-32 right-16 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
 
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
+        <div className="relative z-10 flex flex-col justify-center p-12 text-white gap-8">
           {/* لوگو */}
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
