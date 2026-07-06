@@ -30,7 +30,7 @@ export function AppShell() {
 
   // Hide splash after it animates
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2000);
+    const timer = setTimeout(() => setShowSplash(false), 3000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -63,32 +63,43 @@ export function AppShell() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
+      <>
+        {showSplash && <SplashScreen duration={3000} />}
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      </>
     );
   }
 
   if (status !== "authenticated" || !session) {
-    return <LoginScreen />;
+    return (
+      <>
+        {showSplash && <SplashScreen duration={3000} />}
+        <LoginScreen />
+      </>
+    );
   }
 
   // Wait for accounts to load before rendering the dashboard so views don't
   // briefly flash the "no account" empty state (race condition fix).
   if (accountsLoading && !selectedAccountId) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">در حال بارگذاری داشبورد…</p>
+      <>
+        {showSplash && <SplashScreen duration={3000} />}
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <p className="text-sm text-muted-foreground">در حال بارگذاری داشبورد…</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
     <>
-      {showSplash && <SplashScreen duration={2000} />}
+      {showSplash && <SplashScreen duration={3000} />}
       <div className="min-h-screen flex bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
