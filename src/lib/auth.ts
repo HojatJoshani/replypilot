@@ -1,6 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { db } from "./db";
+import { db, ensureSeedData } from "./db";
 import { verifyPassword } from "./crypto";
 
 export const authOptions: NextAuthOptions = {
@@ -19,6 +19,8 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email) return null;
+        // Ensure DB has demo data (for serverless cold starts on Vercel)
+        await ensureSeedData();
         // Demo bypass: any email + the literal "demo" flag auto-logs into the demo tenant.
         if (credentials.demo === "1") {
           const user = await db.user.findFirst({

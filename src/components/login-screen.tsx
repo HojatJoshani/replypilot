@@ -41,7 +41,8 @@ export function LoginScreen() {
         toast.error(t.login.invalid);
       } else {
         toast.success(t.login.welcomeToast);
-        router.refresh();
+        // Hard reload to ensure session is picked up
+        setTimeout(() => window.location.reload(), 500);
       }
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "خطایی رخ داد");
@@ -61,7 +62,8 @@ export function LoginScreen() {
     if (res?.error) toast.error("ورود دمو ناموفق بود");
     else {
       toast.success(t.login.demoToast);
-      router.refresh();
+      // Hard reload to ensure session is picked up
+      setTimeout(() => window.location.reload(), 500);
     }
     setLoading(false);
   }
