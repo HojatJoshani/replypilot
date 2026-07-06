@@ -26,13 +26,20 @@ export function AppShell() {
   const { data: session, status } = useSession();
   const { view, selectedAccountId, setSelectedAccountId } = useAppStore();
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    // Only show splash on first page load (not after login redirect)
+    if (typeof window === "undefined") return false;
+    return !sessionStorage.getItem("aria-splash-seen");
+  });
 
-  // Hide splash after it animates
+  // Mark splash as seen and hide after animation
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 3000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (showSplash) {
+      sessionStorage.setItem("aria-splash-seen", "1");
+      const timer = setTimeout(() => setShowSplash(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSplash]);
 
   // Load accounts once authenticated; default the selected account.
   const { data: accountsData, isLoading: accountsLoading } = useQuery<{ accounts: InstagramAccountDto[] }>({
