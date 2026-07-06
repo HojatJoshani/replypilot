@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { SCHEMA_SQL } from './schema-sql'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -31,19 +30,8 @@ export async function ensureSchema() {
       globalForPrisma._schemaReady = true
       return
     }
-    // Schema doesn't exist — apply DDL
-    let sql: string
-    try {
-      sql = readFileSync(join(process.cwd(), 'prisma', 'sql', 'schema.sql'), 'utf-8')
-    } catch {
-      try {
-        sql = readFileSync(join(__dirname, '..', '..', 'prisma', 'sql', 'schema.sql'), 'utf-8')
-      } catch {
-        globalForPrisma._schemaReady = true
-        return
-      }
-    }
-    const statements = sql
+    // Schema doesn't exist — apply DDL from bundled SQL
+    const statements = SCHEMA_SQL
       .split(';')
       .map(s => s.trim())
       .filter(s => s.length > 0 && !s.startsWith('--'))

@@ -76,7 +76,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || "aria-demo-fallback-secret-not-for-production-use-9f3a7b2e",
 };
 
 export type AppSession = {

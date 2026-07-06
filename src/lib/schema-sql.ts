@@ -1,3 +1,6 @@
+// Schema SQL for SQLite — auto-generated from prisma/schema.prisma
+// Used by ensureSchema() to create tables on serverless platforms (Vercel)
+export const SCHEMA_SQL = `
 -- CreateTable
 CREATE TABLE "Tenant" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -207,3 +210,4 @@ npm notice New minor version of npm available! 11.13.0 -> 11.18.0
 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.18.0
 npm notice To update run: npm install -g npm@11.18.0
 npm notice
+`;
