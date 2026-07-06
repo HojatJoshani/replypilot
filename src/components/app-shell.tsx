@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
 import { LoginScreen } from "@/components/login-screen";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
+import { SplashScreen } from "@/components/splash-screen";
 import { useAppStore } from "@/lib/store";
 import { DashboardView } from "@/components/views/dashboard-view";
 import { InboxView } from "@/components/views/inbox-view";
@@ -25,6 +26,13 @@ export function AppShell() {
   const { data: session, status } = useSession();
   const { view, selectedAccountId, setSelectedAccountId } = useAppStore();
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+
+  // Hide splash after it animates
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load accounts once authenticated; default the selected account.
   const { data: accountsData, isLoading: accountsLoading } = useQuery<{ accounts: InstagramAccountDto[] }>({
@@ -80,6 +88,7 @@ export function AppShell() {
 
   return (
     <>
+      {showSplash && <SplashScreen duration={2000} />}
       <div className="min-h-screen flex bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
