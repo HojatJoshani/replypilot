@@ -180,7 +180,7 @@ export function SplashScreen({ duration = 2800 }: SplashScreenProps) {
             هوش مصنوعی آریا
           </h1>
           <p className="mt-1 text-sm font-medium text-white/80">
-            خودکارسازی هوشمند اینستاگرام
+            توسعه‌یافته توسط گروه توسعه آریاس
           </p>
         </div>
 

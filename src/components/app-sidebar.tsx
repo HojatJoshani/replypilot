@@ -57,8 +57,8 @@ export function AppSidebar() {
               <Sparkles className="h-5 w-5" />
             </div>
             <div className="text-end leading-tight">
-              <div className="font-bold text-[15px]">{t.brand}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t.brandSub}</div>
+              <div className="font-bold text-[15px]">{t.brandFull}</div>
+              <div className="text-[10px] text-muted-foreground">{t.company}</div>
             </div>
           </button>
           <Button

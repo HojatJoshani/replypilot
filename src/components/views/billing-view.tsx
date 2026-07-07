@@ -122,7 +122,7 @@ function CurrentPlanCard({
             <div className="text-2xl font-semibold tracking-tight">{planDef.label}</div>
           </div>
           <div className="text-sm text-muted-foreground">
-            <span dir="ltr">${toFa(planDef.price)}</span> {t.billing.perMonth}
+            <span className="font-bold text-foreground">{planDef.priceLabel}</span> {t.billing.perMonth}
           </div>
           {subscription?.cancelAtPeriodEnd && (
             <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-xs">
@@ -217,7 +217,7 @@ function PlanCard({
         </div>
         <CardDescription>{plan.tagline}</CardDescription>
         <div className="flex items-baseline gap-1 pt-1">
-          <span dir="ltr" className="text-3xl font-bold tracking-tight">${toFa(plan.price)}</span>
+          <span className="text-2xl font-bold tracking-tight">{plan.priceLabel}</span>
           <span className="text-sm text-muted-foreground">{t.billing.perMonth}</span>
         </div>
       </CardHeader>
@@ -361,6 +361,91 @@ export function BillingView() {
               loading={changeMut.isPending}
             />
           ))}
+        </div>
+      </div>
+
+      {/* Competitor comparison */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-primary" />
+          <h2 className="text-base font-semibold">{t.billing.comparisonTitle}</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">{t.billing.comparisonSubtitle}</p>
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="p-3 text-start font-medium">{t.billing.competitorName}</th>
+                  <th className="p-3 text-center font-medium">{t.billing.competitorPrice}</th>
+                  <th className="p-3 text-center font-medium">{t.billing.competitorAi}</th>
+                  <th className="p-3 text-center font-medium">{t.billing.competitorRules}</th>
+                  <th className="p-3 text-center font-medium hidden sm:table-cell">{t.billing.competitorMultiAccount}</th>
+                  <th className="p-3 text-center font-medium hidden sm:table-cell">{t.billing.competitorAnalytics}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* آریا */}
+                <tr className="border-b bg-primary/5">
+                  <td className="p-3 font-bold text-primary">آریا (حرفه‌ای)</td>
+                  <td className="p-3 text-center font-bold text-primary">۳۹۰٬۰۰۰</td>
+                  <td className="p-3 text-center"><Check className="h-4 w-4 text-emerald-500 mx-auto" /></td>
+                  <td className="p-3 text-center"><Check className="h-4 w-4 text-emerald-500 mx-auto" /></td>
+                  <td className="p-3 text-center hidden sm:table-cell"><Check className="h-4 w-4 text-emerald-500 mx-auto" /></td>
+                  <td className="p-3 text-center hidden sm:table-cell"><Check className="h-4 w-4 text-emerald-500 mx-auto" /></td>
+                </tr>
+                {/* رقبا */}
+                <tr className="border-b">
+                  <td className="p-3">دایرکتم</td>
+                  <td className="p-3 text-center">۸۲۵٬۰۰۰</td>
+                  <td className="p-3 text-center"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center"><Check className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center hidden sm:table-cell"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center hidden sm:table-cell"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-3">الپیدان</td>
+                  <td className="p-3 text-center">۴۹۰٬۰۰۰</td>
+                  <td className="p-3 text-center"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center"><Check className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center hidden sm:table-cell"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center hidden sm:table-cell"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-3">نوین‌هاب</td>
+                  <td className="p-3 text-center">۸۶۳٬۰۰۰</td>
+                  <td className="p-3 text-center"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center"><Check className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center hidden sm:table-cell"><Check className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center hidden sm:table-cell"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                </tr>
+                <tr>
+                  <td className="p-3">وردپرس لاور</td>
+                  <td className="p-3 text-center">۸۷۵٬۰۰۰</td>
+                  <td className="p-3 text-center"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center"><Check className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center hidden sm:table-cell"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                  <td className="p-3 text-center hidden sm:table-cell"><Ban className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </Card>
+        <div className="grid gap-3 sm:grid-cols-2 pt-2">
+          <div className="flex items-start gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3">
+            <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+            <div>
+              <div className="text-sm font-medium">{t.billing.priceAdvantage}</div>
+              <div className="text-xs text-muted-foreground">۵۳٪ ارزان‌تر از دایرکتم، ۲۰٪ ارزان‌تر از الپیدان</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 rounded-lg bg-violet-50 dark:bg-violet-950/20 p-3">
+            <Check className="h-4 w-4 text-violet-500 shrink-0 mt-0.5" />
+            <div>
+              <div className="text-sm font-medium">{t.billing.aiAdvantage}</div>
+              <div className="text-xs text-muted-foreground">{t.billing.builderAdvantage}</div>
+            </div>
+          </div>
         </div>
       </div>
 

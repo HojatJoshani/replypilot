@@ -83,7 +83,7 @@ export function LoginScreen() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
               <Sparkles className="h-5 w-5" />
             </div>
-            <span className="text-2xl font-bold">{t.brand}</span>
+            <span className="text-2xl font-bold">{t.brandFull}</span>
           </div>
 
           {/* عنوان اصلی */}
