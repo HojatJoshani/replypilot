@@ -52,13 +52,13 @@ export function AppSidebar() {
       >
         {/* برند */}
         <div className="flex h-16 items-center justify-between px-5 border-b">
-          <button onClick={() => setView("dashboard")} className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl ig-gradient text-white">
-              <Sparkles className="h-5 w-5" />
-            </div>
+          <button onClick={() => setView("dashboard")} className="flex flex-row-reverse items-center gap-2">
             <div className="text-end leading-tight">
               <div className="font-bold text-[15px]">{t.brandFull}</div>
               <div className="text-[10px] text-muted-foreground">{t.company}</div>
+            </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl ig-gradient text-white">
+              <Sparkles className="h-5 w-5" />
             </div>
           </button>
           <Button
@@ -123,14 +123,14 @@ function NavButton({
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "w-full flex flex-row-reverse items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
         active
           ? "bg-sidebar-accent text-sidebar-accent-foreground"
           : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
       )}
     >
-      <Icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
       <span className="flex-1 text-end">{item.label}</span>
+      <Icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
       {item.id === "inbox" && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">زنده</Badge>}
     </button>
   );
