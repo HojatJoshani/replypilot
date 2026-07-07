@@ -87,9 +87,9 @@ export function AppTopbar() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ms-auto flex items-center gap-2">
         <Button variant="outline" size="sm" className="hidden sm:flex" onClick={() => setView("rules")}>
-          <Plus className="h-4 w-4 ml-1" />
+          <Plus className="h-4 w-4 me-1" />
           {t.dashboard.newRule}
         </Button>
         <ThemeToggle />
@@ -102,7 +102,7 @@ export function AppTopbar() {
                   {initials(session?.user?.name || session?.user?.email)}
                 </AvatarFallback>
               </Avatar>
-              <div className="hidden md:block text-right leading-tight">
+              <div className="hidden md:block text-end leading-tight">
                 <div className="text-sm font-medium max-w-[120px] truncate">{session?.user?.name || "کاربر"}</div>
                 <div className="text-[10px] text-muted-foreground">
                   {(session?.user as { role?: string })?.role === "admin" ? t.roles.admin : t.roles.member}
@@ -119,12 +119,12 @@ export function AppTopbar() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setView("settings")}>
-              <UserIcon className="h-4 w-4 ml-2" />
+              <UserIcon className="h-4 w-4 me-2" />
               {t.nav.settings}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => signOut({ redirect: false }).then(() => window.location.reload())}>
-              <LogOut className="h-4 w-4 ml-2" />
+              <LogOut className="h-4 w-4 me-2" />
               {t.settings.signOut}
             </DropdownMenuItem>
           </DropdownMenuContent>

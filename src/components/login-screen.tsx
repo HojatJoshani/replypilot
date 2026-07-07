@@ -117,11 +117,11 @@ export function LoginScreen() {
                 <div className="text-2xl font-bold" dir="ltr">{toFa(24)}/7</div>
                 <div className="text-xs text-white/70">پاسخگویی خودکار</div>
               </div>
-              <div className="border-r border-white/20 pr-6">
+              <div className="border-s border-white/20 ps-6">
                 <div className="text-2xl font-bold" dir="ltr">{"<"}{toFa(3)}ث</div>
                 <div className="text-xs text-white/70">زمان پاسخ</div>
               </div>
-              <div className="border-r border-white/20 pr-6">
+              <div className="border-s border-white/20 ps-6">
                 <div className="text-2xl font-bold">{toFa(3)} کانال</div>
                 <div className="text-xs text-white/70">دایرکت+کامنت+استوری</div>
               </div>
@@ -198,7 +198,7 @@ export function LoginScreen() {
                   <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required dir="ltr" />
                 </div>
                 <Button type="submit" className="w-full ig-gradient text-white hover:opacity-95" disabled={loading}>
-                  {loading && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
+                  {loading && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
                   {mode === "login" ? t.login.signIn : t.login.signUp}
                 </Button>
               </form>
@@ -209,7 +209,7 @@ export function LoginScreen() {
               </div>
 
               <Button variant="outline" className="w-full border-2 hover:bg-accent" onClick={handleDemo} disabled={loading}>
-                {loading ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <Sparkles className="h-4 w-4 ml-2 text-primary" />}
+                {loading ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : <Sparkles className="h-4 w-4 me-2 text-primary" />}
                 {t.login.demo}
               </Button>
 

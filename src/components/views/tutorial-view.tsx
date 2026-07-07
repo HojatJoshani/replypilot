@@ -128,7 +128,7 @@ export function TutorialView() {
         {/* Header */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => setActiveLesson(null)}>
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <ChevronRight className="h-4 w-4 me-1" />
             {t.tutorial.backToLessons}
           </Button>
         </div>
@@ -182,14 +182,14 @@ export function TutorialView() {
                 onClick={() => setActiveLesson(Math.max(0, activeLesson - 1))}
                 disabled={activeLesson === 0}
               >
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <ChevronRight className="h-4 w-4 me-1" />
                 {t.tutorial.prevLesson}
               </Button>
 
               <div className="flex items-center gap-2">
                 {isComplete && (
                   <Badge className="bg-emerald-100 text-emerald-700 border-0">
-                    <CheckCircle2 className="h-3.5 w-3.5 ml-1" />
+                    <CheckCircle2 className="h-3.5 w-3.5 me-1" />
                     {t.tutorial.completed}
                   </Badge>
                 )}
@@ -205,7 +205,7 @@ export function TutorialView() {
                     onClick={() => { markComplete(lesson.num); setActiveLesson(null); }}
                   >
                     {t.tutorial.backToLessons}
-                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    <ChevronLeft className="h-4 w-4 ms-1" />
                   </Button>
                 ) : (
                   <Button
@@ -214,7 +214,7 @@ export function TutorialView() {
                     onClick={() => { markComplete(lesson.num); setActiveLesson(activeLesson + 1); }}
                   >
                     {t.tutorial.nextLesson}
-                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    <ChevronLeft className="h-4 w-4 ms-1" />
                   </Button>
                 )}
               </div>

@@ -12,6 +12,7 @@ import {
   Sparkles,
   X,
   GraduationCap,
+  ShieldCheck,
 } from "lucide-react";
 import { useAppStore, type ViewId } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ const NAV: { id: ViewId; label: string; icon: typeof Inbox }[] = [
   { id: "analytics", label: t.nav.analytics, icon: BarChart3 },
   { id: "billing", label: t.nav.billing, icon: CreditCard },
   { id: "tutorial", label: t.nav.tutorial, icon: GraduationCap },
+  { id: "terms", label: "قوانین و شروط", icon: ShieldCheck },
   { id: "settings", label: t.nav.settings, icon: Settings },
 ];
 
@@ -44,7 +46,7 @@ export function AppSidebar() {
       )}
       <aside
         className={cn(
-          "fixed inset-y-0 right-0 z-50 w-64 shrink-0 border-l bg-sidebar text-sidebar-foreground flex flex-col transition-transform lg:static lg:translate-x-0",
+          "fixed inset-y-0 right-0 z-50 w-64 shrink-0 border-e bg-sidebar text-sidebar-foreground flex flex-col transition-transform lg:static lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "translate-x-full",
         )}
       >
@@ -54,7 +56,7 @@ export function AppSidebar() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl ig-gradient text-white">
               <Sparkles className="h-5 w-5" />
             </div>
-            <div className="text-right leading-tight">
+            <div className="text-end leading-tight">
               <div className="font-bold text-[15px]">{t.brand}</div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t.brandSub}</div>
             </div>
@@ -74,13 +76,13 @@ export function AppSidebar() {
           <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             {t.nav.workspace}
           </div>
-          {NAV.slice(0, 7).map((item) => (
+          {NAV.slice(0, 8).map((item) => (
             <NavButton key={item.id} item={item} active={view === item.id} onClick={() => { setView(item.id); setSidebarOpen(false); }} />
           ))}
           <div className="px-2 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             {t.nav.account}
           </div>
-          {NAV.slice(7).map((item) => (
+          {NAV.slice(8).map((item) => (
             <NavButton key={item.id} item={item} active={view === item.id} onClick={() => { setView(item.id); setSidebarOpen(false); }} />
           ))}
         </nav>
@@ -128,7 +130,7 @@ function NavButton({
       )}
     >
       <Icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
-      <span className="flex-1 text-right">{item.label}</span>
+      <span className="flex-1 text-end">{item.label}</span>
       {item.id === "inbox" && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">زنده</Badge>}
     </button>
   );
